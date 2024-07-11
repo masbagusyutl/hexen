@@ -6,7 +6,7 @@ def load_access_tokens():
     try:
         with open('data.txt', 'r') as file:
             lines = file.readlines()
-            access_tokens = [line.strip().split(': ')[1] for line in lines if line.startswith('Access-Token')]
+            access_tokens = [line.strip() for line in lines if line.startswith('eyJ0')]
             return access_tokens
     except FileNotFoundError:
         print("File data.txt not found.")
