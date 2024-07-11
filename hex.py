@@ -3,16 +3,19 @@ import time
 from datetime import datetime, timedelta
 
 def load_access_tokens():
-    # Fungsi untuk memuat Access-Token dari file data.txt
-    with open('data.txt', 'r') as file:
-        lines = file.readlines()
-        access_tokens = [line.strip() for line in lines if line.startswith('Access-Token')]
-        return access_tokens
+    try:
+        with open('data.txt', 'r') as file:
+            lines = file.readlines()
+            access_tokens = [line.strip().split(': ')[1] for line in lines if line.startswith('Access-Token')]
+            return access_tokens
+    except FileNotFoundError:
+        print("File data.txt not found.")
+        return []
 
 def perform_claim_request(access_token):
     url = 'https://api.hexn.cc/v1/kyc/marketing/farming/claim/'
     headers = {
-        'Authorization': f'Bearer {access_token}',
+        'Access-Token': access_token,
         'Content-Type': 'application/json'
     }
     response = requests.post(url, headers=headers)
@@ -21,7 +24,7 @@ def perform_claim_request(access_token):
 def perform_start_farming_request(access_token):
     url = 'https://api.hexn.cc/v1/kyc/marketing/farming/start/'
     headers = {
-        'Authorization': f'Bearer {access_token}',
+        'Access-Token': access_token,
         'Content-Type': 'application/json'
     }
     response = requests.post(url, headers=headers)
@@ -43,17 +46,12 @@ def main():
 
     print(f"Total accounts in data.txt: {num_accounts}")
 
+    if num_accounts == 0:
+        return
+
     for access_token in access_tokens:
         current_account_index += 1
         print(f"Processing account {current_account_index} of {num_accounts}")
-        
-        # Perform farming start request
-        start_response = perform_start_farming_request(access_token)
-        
-        if start_response.status_code == 200:
-            print("Farming start request successful.")
-        else:
-            print(f"Farming start request failed with status code {start_response.status_code}.")
         
         # Perform claim request
         claim_response = perform_claim_request(access_token)
@@ -62,6 +60,14 @@ def main():
             print("Claim request successful.")
         else:
             print(f"Claim request failed with status code {claim_response.status_code}.")
+        
+        # Perform farming start request
+        start_response = perform_start_farming_request(access_token)
+        
+        if start_response.status_code == 200:
+            print("Farming start request successful.")
+        else:
+            print(f"Farming start request failed with status code {start_response.status_code}.")
         
         # Countdown for 8 hours
         countdown_seconds = 8 * 60 * 60  # 8 hours in seconds
