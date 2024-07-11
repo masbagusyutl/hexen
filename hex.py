@@ -40,42 +40,52 @@ def countdown_timer(seconds):
         seconds -= 1
 
 def main():
-    access_tokens = load_access_tokens()
-    num_accounts = len(access_tokens)
-    current_account_index = 0
+    while True:
+        access_tokens = load_access_tokens()
+        num_accounts = len(access_tokens)
+        current_account_index = 0
 
-    print(f"Total accounts in data.txt: {num_accounts}")
+        print(f"Total accounts in data.txt: {num_accounts}")
 
-    if num_accounts == 0:
-        return
+        if num_accounts == 0:
+            print("No accounts found in data.txt. Exiting program.")
+            return
 
-    for access_token in access_tokens:
-        current_account_index += 1
-        print(f"Processing account {current_account_index} of {num_accounts}")
-        
-        # Perform claim request
-        claim_response = perform_claim_request(access_token)
-        
-        if claim_response.status_code == 200:
-            print("Claim request successful.")
-        else:
-            print(f"Claim request failed with status code {claim_response.status_code}.")
-        
-        # Perform farming start request
-        start_response = perform_start_farming_request(access_token)
-        
-        if start_response.status_code == 200:
-            print("Farming start request successful.")
-        else:
-            print(f"Farming start request failed with status code {start_response.status_code}.")
-        
-        # Countdown for 8 hours
+        for access_token in access_tokens:
+            current_account_index += 1
+            print(f"Processing account {current_account_index} of {num_accounts}")
+            
+            # Perform claim request
+            claim_response = perform_claim_request(access_token)
+            
+            if claim_response.status_code == 200:
+                print("Claim request successful.")
+            else:
+                print(f"Claim request failed with status code {claim_response.status_code}.")
+            
+            # Perform farming start request
+            start_response = perform_start_farming_request(access_token)
+            
+            if start_response.status_code == 200:
+                print("Farming start request successful.")
+            else:
+                print(f"Farming start request failed with status code {start_response.status_code}.")
+            
+            # Pause for 5 seconds before processing the next account
+            if current_account_index < num_accounts:
+                print("Waiting for 5 seconds before the next account...")
+                time.sleep(5)
+
+        # After processing all accounts, start 8-hour countdown
+        print("All accounts processed. Starting 8-hour countdown now.")
+
         countdown_seconds = 8 * 60 * 60  # 8 hours in seconds
         end_time = datetime.now() + timedelta(seconds=countdown_seconds)
         while datetime.now() < end_time:
             time_remaining = int((end_time - datetime.now()).total_seconds())
             countdown_timer(time_remaining)
             time.sleep(1)
+        print("\nCountdown completed. Restarting process.")
 
 if __name__ == "__main__":
     main()
