@@ -1,118 +1,89 @@
 import requests
 import time
 import json
+import sys
 from datetime import datetime, timedelta
 
-def read_accounts(filename='data.txt'):
-    accounts = []
-    usernames = []
-    with open(filename, 'r') as file:
-        for line in file:
-            parts = line.strip().split('&')
-            if len(parts) < 2:
-                print(f"Skipping invalid line: {line.strip()}")
-                continue  # Skip lines that don't have at least two parts
-            account_data = parts[0]  # Assuming the first part contains the init_data
-            username = extract_username(parts[1])  # Extract username from the second part
-            accounts.append(account_data)
-            usernames.append(username)
-    return accounts, usernames
+# Konstanta
+LOGIN_URL = "https://clicker.hexn.cc/v1/state"
+BOOSTER_URL = "https://clicker.hexn.cc/v1/apply-farming-booster"
+CLAIM_URL = "https://clicker.hexn.cc/v1/farming/start"
+DATA_FILE = "data.txt"
 
-def extract_username(query_string):
-    # Extract username from the query string
-    username_key = 'username%22%3A%22'
-    start = query_string.find(username_key) + len(username_key)
-    end = query_string.find('%22', start)
-    if start == -1 or end == -1:
-        return 'Unknown'  # Return a default value if username is not found
-    return query_string[start:end]
+def read_accounts():
+    with open(DATA_FILE, "r") as file:
+        return [line.strip() for line in file.readlines()]
 
-def login(account):
-    url = 'https://clicker.hexn.cc/v1/state'
+def login(init_data):
     headers = {
-        'Accept': 'application/json, text/plain, */*',
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0'
+        "Content-Type": "application/json",
     }
-    payload = {
-        'init_data': account
-    }
-    response = requests.post(url, headers=headers, json=payload)
+    payload = {"init_data": init_data}
+    response = requests.post(LOGIN_URL, headers=headers, json=payload)
     return response.json()
 
-def claim_booster(account):
-    url = 'https://clicker.hexn.cc/v1/apply-farming-booster'
+def claim_booster(init_data):
     headers = {
-        'Accept': 'application/json, text/plain, */*',
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0'
+        "Content-Type": "application/json",
     }
-    payload = {
-        'init_data': account
-    }
-    response = requests.post(url, headers=headers, json=payload)
+    payload = {"init_data": init_data}
+    response = requests.post(BOOSTER_URL, headers=headers, json=payload)
     return response.json()
 
-def claim_8_hour(account):
-    url = 'https://clicker.hexn.cc/v1/farming/start'
+def claim_8_hours(init_data):
     headers = {
-        'Accept': 'application/json, text/plain, */*',
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0'
+        "Content-Type": "application/json",
     }
-    payload = {
-        'init_data': account
-    }
-    response = requests.post(url, headers=headers, json=payload)
+    payload = {"init_data": init_data}
+    response = requests.post(CLAIM_URL, headers=headers, json=payload)
     return response.json()
 
-def countdown_8_hours():
-    end_time = datetime.now() + timedelta(hours=8)
-    while True:
-        remaining_time = end_time - datetime.now()
-        if remaining_time.total_seconds() <= 0:
+def countdown_timer(seconds):
+    start_time = time.time()
+    while seconds:
+        elapsed = time.time() - start_time
+        remaining = seconds - int(elapsed)
+        if remaining < 0:
             break
-        print(f'Next run in: {remaining_time}', end='\r')
+        mins, secs = divmod(remaining, 60)
+        hours, mins = divmod(mins, 60)
+        sys.stdout.write(f"\rWaktu tersisa: {hours:02}:{mins:02}:{secs:02}")
+        sys.stdout.flush()
         time.sleep(1)
+    sys.stdout.write("\n")
 
-def main():
-    accounts, usernames = read_accounts()
+def process_accounts():
+    accounts = read_accounts()
     num_accounts = len(accounts)
-    print(f'Number of accounts: {num_accounts}')
-    
+    print(f"Jumlah akun: {num_accounts}")
+
     while True:
-        for idx, (account, username) in enumerate(zip(accounts, usernames)):
-            print(f'\nProcessing account {idx + 1}/{num_accounts}')
+        for idx, init_data in enumerate(accounts):
+            print(f"\nMemproses akun {idx + 1}/{num_accounts}")
             
-            # Step 1: Login
-            print('Logging in...')
-            login_response = login(account)
-            if login_response.get('status') == 'OK':
-                balance = login_response['data']['balance']
-                print(f'Account: {username}')
-                print(f'Balance: {balance}')
-            else:
-                print('Login failed.')
-                continue
+            # Login
+            print("Login...")
+            login_response = login(init_data)
+            balance = login_response["data"]["balance"]
+            print(f"Balance akun: {balance}")
             
-            # Step 2: Claim booster
-            print('Claiming booster...')
-            booster_response = claim_booster(account)
-            print(f'Booster claim response: {booster_response}')
+            # Claim Booster
+            print("Mengklaim booster...")
+            booster_response = claim_booster(init_data)
+            print("Booster telah diklaim.")
             
-            # Step 3: Claim 8 hour
-            print('Claiming 8 hour...')
-            claim_response = claim_8_hour(account)
-            points_amount = claim_response.get('points_amount', 'N/A')
-            print(f'Points claimed: {points_amount}')
-            
-            # Wait 5 seconds before processing next account
-            print('Waiting 5 seconds before next account...')
+            # Claim 8 Hours
+            print("Mengklaim 8 jam...")
+            claim_response = claim_8_hours(init_data)
+            points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
+            print(f"Poin yang didapat: {points_amount}")
+
+            # Jeda 5 detik antar akun
             time.sleep(5)
         
-        # Step 4: Countdown before restart
-        print('All accounts processed. Starting countdown for next run.')
-        countdown_8_hours()
+        # Hitung mundur 8 jam
+        print("\nHitung mundur 8 jam dimulai...")
+        countdown_timer(28800)  # 8 hours in seconds
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    process_accounts()
