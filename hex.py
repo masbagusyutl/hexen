@@ -2,145 +2,105 @@ import requests
 import time
 import json
 from datetime import datetime, timedelta
-from colorama import Fore, Style
 
-# File path
-data_file = 'data.txt'
-
-# URLs
-login_url = 'https://clicker.hexn.cc/v1/state'
-booster_url = 'https://clicker.hexn.cc/v1/apply-farming-booster'
-claim_url = 'https://clicker.hexn.cc/v1/farming/start'
-
-def load_accounts(filename):
+def read_accounts(filename='data.txt'):
     with open(filename, 'r') as file:
-        return [line.strip() for line in file if line.strip()]
+        accounts = [line.strip() for line in file.readlines()]
+    return accounts
 
-def login(account_data):
+def login(account):
+    url = 'https://clicker.hexn.cc/v1/state'
     headers = {
         'Accept': 'application/json, text/plain, */*',
         'Content-Type': 'application/json',
-        'Content-Length': '374',  # Panjang payload aktual bisa dihitung secara dinamis
-        'Fingerprint': '7b5f8282144087cf265aaab3282600b5',
-        'Origin': 'https://tgapp.hexn.cc',
-        'Platform': 'WEB',
-        'Platform-Version': '0.0.42',
-        'Pragma': 'no-cache',
-        'Priority': 'u=1, i',
-        'Sec-Ch-Ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Microsoft Edge";v="126", "Microsoft Edge WebView2";v="126"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-site',
-        'Trace-Uuid': '3d2c7ff6-e2db-42fb-9848-877ea0722960',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0'
+        'User-Agent': 'Mozilla/5.0'
     }
     payload = {
-        'init_data': account_data
+        'init_data': account
     }
-    response = requests.post(login_url, headers=headers)
-    if response.status_code == 200:
-        data = response.json()
-        balance = data['data']['balance']
-        username = json.loads(account_data)['username']
-        print(f"{Fore.GREEN}Login successful for account {username}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}Balance: {balance}{Style.RESET_ALL}")
-        return data
-    else:
-        print(f"{Fore.RED}Login failed for account {account_data}{Style.RESET_ALL}")
-        return None
+    response = requests.post(url, headers=headers, json=payload)
+    return response.json()
 
-def claim_booster(account_data):
+def claim_booster(account):
+    url = 'https://clicker.hexn.cc/v1/apply-farming-booster'
     headers = {
         'Accept': 'application/json, text/plain, */*',
         'Content-Type': 'application/json',
-        'Content-Length': '374',  # Panjang payload aktual bisa dihitung secara dinamis
-        'Fingerprint': '7b5f8282144087cf265aaab3282600b5',
-        'Origin': 'https://tgapp.hexn.cc',
-        'Platform': 'WEB',
-        'Platform-Version': '0.0.42',
-        'Pragma': 'no-cache',
-        'Priority': 'u=1, i',
-        'Sec-Ch-Ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Microsoft Edge";v="126", "Microsoft Edge WebView2";v="126"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-site',
-        'Trace-Uuid': '3d2c7ff6-e2db-42fb-9848-877ea0722960',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0'
+        'User-Agent': 'Mozilla/5.0'
     }
     payload = {
-        'init_data': account_data
+        'init_data': account
     }
-    response = requests.post(booster_url, headers=headers)
-    if response.status_code == 200:
-        print(f"{Fore.GREEN}Booster claimed successfully for account {account_data}{Style.RESET_ALL}")
-    else:
-        print(f"{Fore.RED}Failed to claim booster for account {account_data}{Style.RESET_ALL}")
+    response = requests.post(url, headers=headers, json=payload)
+    return response.json()
 
-def claim_8_hours(account_data):
+def claim_8_hour(account):
+    url = 'https://clicker.hexn.cc/v1/farming/start'
     headers = {
         'Accept': 'application/json, text/plain, */*',
         'Content-Type': 'application/json',
-        'Content-Length': '374',  # Panjang payload aktual bisa dihitung secara dinamis
-        'Fingerprint': '7b5f8282144087cf265aaab3282600b5',
-        'Origin': 'https://tgapp.hexn.cc',
-        'Platform': 'WEB',
-        'Platform-Version': '0.0.42',
-        'Pragma': 'no-cache',
-        'Priority': 'u=1, i',
-        'Sec-Ch-Ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Microsoft Edge";v="126", "Microsoft Edge WebView2";v="126"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-site',
-        'Trace-Uuid': '3d2c7ff6-e2db-42fb-9848-877ea0722960',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0'
+        'User-Agent': 'Mozilla/5.0'
     }
     payload = {
-        'init_data': account_data
+        'init_data': account
     }
-    response = requests.post(claim_url, headers=headers, json=payload)
-    if response.status_code == 200:
-        data = response.json()
-        points = data['data']['points_amount']
-        print(f"{Fore.GREEN}8-hour claim successful for account {account_data}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}Points claimed: {points}{Style.RESET_ALL}")
-    else:
-        print(f"{Fore.RED}Failed to claim 8-hour task for account {account_data}{Style.RESET_ALL}")
+    response = requests.post(url, headers=headers, json=payload)
+    return response.json()
 
-def countdown_timer(duration):
-    end_time = datetime.now() + timedelta(seconds=duration)
+def countdown_8_hours():
+    end_time = datetime.now() + timedelta(hours=8)
     while True:
-        remaining = end_time - datetime.now()
-        if remaining.total_seconds() <= 0:
+        remaining_time = end_time - datetime.now()
+        if remaining_time.total_seconds() <= 0:
             break
-        print(f"\rTime remaining: {remaining}", end='')
+        print(f'Next run in: {remaining_time}', end='\r')
         time.sleep(1)
-    print("\nTimer completed!")
 
 def main():
-    accounts = load_accounts(data_file)
-    total_accounts = len(accounts)
-    print(f"{Fore.CYAN}Total accounts: {total_accounts}{Style.RESET_ALL}")
-
+    accounts = read_accounts()
+    num_accounts = len(accounts)
+    print(f'Number of accounts: {num_accounts}')
+    
     while True:
-        for index, account_data in enumerate(accounts):
-            print(f"{Fore.CYAN}Processing account {index + 1}/{total_accounts}{Style.RESET_ALL}")
+        for idx, account in enumerate(accounts):
+            print(f'\nProcessing account {idx + 1}/{num_accounts}')
             
-            login_response = login(account_data)
-            if login_response:
-                claim_booster(account_data)
-                claim_8_hours(account_data)
+            # Step 1: Login
+            print('Logging in...')
+            login_response = login(account)
+            if login_response.get('status') == 'OK':
+                username = get_username(login_response['data']['init_data'])
+                balance = login_response['data']['balance']
+                print(f'Account: {username}')
+                print(f'Balance: {balance}')
+            else:
+                print('Login failed.')
+                continue
             
-            print(f"{Fore.CYAN}Waiting 5 seconds before processing the next account...{Style.RESET_ALL}")
+            # Step 2: Claim booster
+            print('Claiming booster...')
+            booster_response = claim_booster(account)
+            print(f'Booster claim response: {booster_response}')
+            
+            # Step 3: Claim 8 hour
+            print('Claiming 8 hour...')
+            claim_response = claim_8_hour(account)
+            points_amount = claim_response.get('points_amount', 'N/A')
+            print(f'Points claimed: {points_amount}')
+            
+            # Wait 5 seconds before processing next account
+            print('Waiting 5 seconds before next account...')
             time.sleep(5)
+        
+        # Step 4: Countdown before restart
+        print('All accounts processed. Starting countdown for next run.')
+        countdown_8_hours()
 
-        print(f"{Fore.CYAN}All accounts processed. Starting 8-hour countdown...{Style.RESET_ALL}")
-        countdown_timer(28800)  # 8 hours in seconds
+def get_username(init_data):
+    # Extract username from init_data
+    start = init_data.find('"username":"') + len('"username":"')
+    end = init_data.find('"', start)
+    return init_data[start:end]
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
