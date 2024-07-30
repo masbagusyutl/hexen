@@ -3,10 +3,19 @@ import requests
 import json
 from datetime import datetime, timedelta
 
+def parse_account(line):
+    account = {}
+    pairs = line.strip().split('&')
+    for pair in pairs:
+        key, value = pair.split('=', 1)
+        account[key] = value
+    return account
+
 def load_accounts(file_path='data.txt'):
     with open(file_path, 'r') as file:
         lines = file.readlines()
-    return [line.strip() for line in lines]
+    accounts = [parse_account(line) for line in lines]
+    return accounts
 
 def make_post_request(url, headers, payload=None):
     try:
@@ -23,12 +32,12 @@ def make_post_request(url, headers, payload=None):
 def login(account):
     url = 'https://clicker.hexn.cc/v1/state'
     headers = {'Content-Type': 'application/json'}
-    payload = json.loads(account)
     
-    response = make_post_request(url, headers, payload)
+    response = make_post_request(url, headers, account)
     
     if response:
-        username = json.loads(account)['init_data'].split('%22%3A%22')[1].split('%22')[0]
+        user_info = json.loads(account['user'])
+        username = user_info['username']
         balance = response['data']['balance']
         print(f"Account: {username}, Balance: {balance}")
         return True, username, balance
@@ -39,9 +48,8 @@ def login(account):
 def claim_booster(account):
     url = 'https://clicker.hexn.cc/v1/booster'
     headers = {'Content-Type': 'application/json'}
-    payload = json.loads(account)
     
-    response = make_post_request(url, headers, payload)
+    response = make_post_request(url, headers, account)
     
     if response:
         print(f"Booster claimed successfully for account.")
@@ -53,9 +61,8 @@ def claim_booster(account):
 def claim_8_hour_points(account):
     url = 'https://clicker.hexn.cc/v1/8hourpoints'
     headers = {'Content-Type': 'application/json'}
-    payload = json.loads(account)
     
-    response = make_post_request(url, headers, payload)
+    response = make_post_request(url, headers, account)
     
     if response:
         print(f"8-hour points claimed successfully for account.")
