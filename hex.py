@@ -1,113 +1,88 @@
-import time
 import requests
 import json
-from datetime import datetime, timedelta
+import time
 
-def parse_account(line):
-    account = {}
-    pairs = line.strip().split('&')
+def load_accounts():
+    with open('data.txt', 'r') as file:
+        lines = file.read().strip().split('\n')
+    accounts = [parse_account(line) for line in lines if line]
+    return accounts
+
+def parse_account(account_str):
+    pairs = account_str.split('&')
+    account_data = {}
     for pair in pairs:
         if '=' in pair:
             key, value = pair.split('=', 1)
-            account[key] = value
-    return account
-
-def load_accounts(file_path='data.txt'):
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-    accounts = [parse_account(line) for line in lines]
-    return accounts
+            account_data[key] = value
+    return account_data
 
 def make_post_request(url, headers, payload=None):
-    try:
-        response = requests.post(url, headers=headers, json=payload)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Request to {url} failed with status code: {response.status_code}")
-            return None
-    except Exception as e:
-        print(f"An error occurred during the request to {url}: {e}")
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Request failed with status code {response.status_code}: {response.text}")
         return None
 
 def login(account):
-    url = 'https://clicker.hexn.cc/v1/state'
-    headers = {'Content-Type': 'application/json'}
-    
-    response = make_post_request(url, headers, account)
-    
-    if response:
-        user_info = json.loads(account['user'])
-        username = user_info['username']
-        balance = response['data']['balance']
-        print(f"Account: {username}, Balance: {balance}")
+    url = "https://clicker.hexn.cc/v1/login"  # Ganti dengan URL login yang benar
+    headers = {
+        "Initdata": account["query_id"],
+    }
+    response = make_post_request(url, headers)
+    if response and response.get("code") == 200:
+        username = json.loads(account["user"])["username"]
+        balance = response["data"]["balance"]
         return True, username, balance
-    else:
-        print("Login failed.")
-        return False, None, None
+    return False, None, None
 
-def claim_booster(account):
-    url = 'https://clicker.hexn.cc/v1/booster'
-    headers = {'Content-Type': 'application/json'}
-    
-    response = make_post_request(url, headers, account)
-    
-    if response:
-        print(f"Booster claimed successfully for account.")
-        return True
-    else:
-        print("Booster claim failed.")
-        return False
+def claim_8_hours(account):
+    url = "https://clicker.hexn.cc/v1/farming/start"
+    headers = {
+        "Authorization": account["hash"],
+    }
+    response = make_post_request(url, headers)
+    if response and response.get("code") == 200:
+        return response["data"]["pointClaimed"]
+    return None
 
-def claim_8_hour_points(account):
-    url = 'https://clicker.hexn.cc/v1/8hourpoints'
-    headers = {'Content-Type': 'application/json'}
-    
-    response = make_post_request(url, headers, account)
-    
-    if response:
-        print(f"8-hour points claimed successfully for account.")
-        return True
-    else:
-        print("8-hour points claim failed.")
-        return False
-
-def countdown_timer(hours):
-    end_time = datetime.now() + timedelta(hours=hours)
-    while datetime.now() < end_time:
-        time_left = end_time - datetime.now()
-        print(f"Time left: {str(time_left).split('.')[0]}", end='\r')
-        time.sleep(1)
-    print("\nCountdown finished. Restarting tasks...")
+def apply_farming_booster(account):
+    url = "https://clicker.hexn.cc/v1/apply-farming-booster"
+    headers = {
+        "Authorization": account["hash"],
+    }
+    response = make_post_request(url, headers)
+    if response and response.get("code") == 200:
+        return response["data"]["boosterApplied"]
+    return None
 
 def main():
     accounts = load_accounts()
-    num_accounts = len(accounts)
-    print(f"Total accounts: {num_accounts}")
-
-    while True:
-        for i, account in enumerate(accounts, 1):
-            print(f"Processing account {i}/{num_accounts}")
-            
-            success, username, balance = login(account)
-            if success:
-                if claim_booster(account):
-                    print(f"Booster claimed successfully for account {username}.")
-                else:
-                    print(f"Booster claim failed for account {username}.")
-                    
-                if claim_8_hour_points(account):
-                    print(f"8-hour points claimed successfully for account {username}.")
-                else:
-                    print(f"8-hour points claim failed for account {username}.")
+    for idx, account in enumerate(accounts, start=1):
+        print(f"Processing account {idx}/{len(accounts)}...")
+        success, username, balance = login(account)
+        if success:
+            print(f"Logged in as {username}, balance: {balance}")
+            booster_applied = apply_farming_booster(account)
+            if booster_applied:
+                print(f"Booster applied successfully for {username}.")
             else:
-                print(f"Skipping account {i} due to login failure.")
-            
-            print(f"Waiting 5 seconds before processing next account...")
-            time.sleep(5)
-        
-        print("All accounts processed. Starting 8-hour countdown.")
-        countdown_timer(8)
+                print(f"Failed to apply booster for {username}.")
+
+            time.sleep(5)  # Jeda 5 detik antar tugas
+
+            point_claimed = claim_8_hours(account)
+            if point_claimed:
+                print(f"8-hour claim successful for {username}, points claimed: {point_claimed}")
+            else:
+                print(f"8-hour claim failed for {username}.")
+        else:
+            print(f"Login failed for account {idx}.")
+
+        time.sleep(10)  # Jeda 10 detik antar akun
+
+    print("All tasks completed.")
 
 if __name__ == "__main__":
     main()
