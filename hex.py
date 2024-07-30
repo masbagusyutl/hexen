@@ -7,8 +7,9 @@ def parse_account(line):
     account = {}
     pairs = line.strip().split('&')
     for pair in pairs:
-        key, value = pair.split('=', 1)
-        account[key] = value
+        if '=' in pair:
+            key, value = pair.split('=', 1)
+            account[key] = value
     return account
 
 def load_accounts(file_path='data.txt'):
