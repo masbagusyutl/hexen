@@ -4,9 +4,23 @@ import json
 from datetime import datetime, timedelta
 
 def read_accounts(filename='data.txt'):
+    accounts = []
+    usernames = []
     with open(filename, 'r') as file:
-        accounts = [line.strip() for line in file.readlines()]
-    return accounts
+        for line in file:
+            parts = line.strip().split('&')
+            account_data = parts[0]  # Assuming the first part contains the init_data
+            username = extract_username(parts[1])  # Extract username from the second part
+            accounts.append(account_data)
+            usernames.append(username)
+    return accounts, usernames
+
+def extract_username(query_string):
+    # Extract username from the query string
+    username_key = 'username%22%3A%22'
+    start = query_string.find(username_key) + len(username_key)
+    end = query_string.find('%22', start)
+    return query_string[start:end]
 
 def login(account):
     url = 'https://clicker.hexn.cc/v1/state'
@@ -57,19 +71,18 @@ def countdown_8_hours():
         time.sleep(1)
 
 def main():
-    accounts = read_accounts()
+    accounts, usernames = read_accounts()
     num_accounts = len(accounts)
     print(f'Number of accounts: {num_accounts}')
     
     while True:
-        for idx, account in enumerate(accounts):
+        for idx, (account, username) in enumerate(zip(accounts, usernames)):
             print(f'\nProcessing account {idx + 1}/{num_accounts}')
             
             # Step 1: Login
             print('Logging in...')
             login_response = login(account)
             if login_response.get('status') == 'OK':
-                username = get_username(login_response['data']['init_data'])
                 balance = login_response['data']['balance']
                 print(f'Account: {username}')
                 print(f'Balance: {balance}')
@@ -95,12 +108,6 @@ def main():
         # Step 4: Countdown before restart
         print('All accounts processed. Starting countdown for next run.')
         countdown_8_hours()
-
-def get_username(init_data):
-    # Extract username from init_data
-    start = init_data.find('"username":"') + len('"username":"')
-    end = init_data.find('"', start)
-    return init_data[start:end]
 
 if __name__ == '__main__':
     main()
