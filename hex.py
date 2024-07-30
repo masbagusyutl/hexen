@@ -64,11 +64,12 @@ def process_accounts():
             # Login
             print("Login...")
             login_response = login(init_data)
-            if "data" in login_response:
-                print("Login berhasil.")
+            if 'data' in login_response:
+                balance = login_response["data"].get("balance", "Tidak tersedia")
+                print(f"Balance akun: {balance}")
             else:
                 print("Login gagal atau data tidak tersedia.")
-                continue  # Skip to next account if login fails or data is missing
+                continue
             
             # Claim Booster
             print("Mengklaim booster...")
@@ -78,12 +79,11 @@ def process_accounts():
             # Claim 8 Hours
             print("Mengklaim 8 jam...")
             claim_response = claim_8_hours(init_data)
-            if "data" in claim_response:
-                points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
-                if points_amount != "Tidak tersedia":
-                    print(f"Poin yang didapat: {points_amount}")
+            points_amount = claim_response["data"].get("points_amount")
+            if points_amount is not None:
+                print(f"Poin yang didapat: {points_amount}")
             else:
-                print("Data poin tidak tersedia.")
+                print("Belum waktunya mengklaim 8 jam untuk akun ini.")
 
             # Jeda 5 detik antar akun
             time.sleep(5)
