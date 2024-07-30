@@ -1,91 +1,82 @@
 import requests
 import time
+import json
 from datetime import datetime, timedelta
 
-def load_access_tokens():
-    try:
-        with open('data.txt', 'r') as file:
-            lines = file.readlines()
-            access_tokens = [line.strip() for line in lines if line.startswith('eyJ0')]
-            return access_tokens
-    except FileNotFoundError:
-        print("File data.txt not found.")
-        return []
+def read_accounts(file_path):
+    with open(file_path, 'r') as file:
+        return [line.strip() for line in file.readlines()]
 
-def perform_claim_request(access_token):
-    url = 'https://api.hexn.cc/v1/kyc/marketing/farming/claim/'
-    headers = {
-        'Access-Token': access_token,
-        'Content-Type': 'application/json'
-    }
-    response = requests.post(url, headers=headers)
-    return response
+def extract_username(init_data):
+    # Extract username from initData
+    start = init_data.find('username%22%3A%22') + len('username%22%3A%22')
+    end = init_data.find('%22', start)
+    return init_data[start:end]
 
-def perform_start_farming_request(access_token):
-    url = 'https://api.hexn.cc/v1/kyc/marketing/farming/start/'
-    headers = {
-        'Access-Token': access_token,
-        'Content-Type': 'application/json'
-    }
-    response = requests.post(url, headers=headers)
-    return response
+def make_post_request(url, headers, payload=None):
+    response = requests.post(url, headers=headers, json=payload)
+    return response.json()
 
-def countdown_timer(seconds):
-    while seconds:
-        m, s = divmod(seconds, 60)
-        h, m = divmod(m, 60)
-        time_left = "{:02d}:{:02d}:{:02d}".format(h, m, s)
-        print(f"Countdown: {time_left} remaining", end="\r")
+def login(init_data):
+    url = "https://clicker.hexn.cc/v1/state"
+    headers = {"Initdata": init_data}
+    response = make_post_request(url, headers)
+    if response["status"] == "OK":
+        username = extract_username(init_data)
+        balance = response["data"]["balance"]
+        print(f"Login successful for {username}. Balance: {balance}")
+        return username, balance
+    else:
+        print(f"Login failed for init_data: {init_data}")
+        return None, None
+
+def claim_booster(init_data):
+    url = "https://clicker.hexn.cc/v1/booster"
+    headers = {"Initdata": init_data}
+    response = make_post_request(url, headers)
+    if response["status"] == "OK":
+        print(f"Booster claimed successfully for init_data: {init_data}")
+    else:
+        print(f"Failed to claim booster for init_data: {init_data}")
+
+def claim_8_hour_points(init_data):
+    url = "https://clicker.hexn.cc/v1/claim"
+    headers = {"Initdata": init_data}
+    response = make_post_request(url, headers)
+    if response["status"] == "OK":
+        points_amount = response["data"]["points_amount"]
+        print(f"8-hour points claimed successfully for init_data: {init_data}. Points: {points_amount}")
+        return points_amount
+    else:
+        print(f"Failed to claim 8-hour points for init_data: {init_data}")
+        return 0
+
+def countdown(duration_seconds):
+    end_time = datetime.now() + timedelta(seconds=duration_seconds)
+    while datetime.now() < end_time:
+        remaining_time = end_time - datetime.now()
+        print(f"\rTime until next cycle: {remaining_time}", end='')
         time.sleep(1)
-        seconds -= 1
+    print()
 
 def main():
+    accounts = read_accounts("data.txt")
+    print(f"Total accounts: {len(accounts)}")
+    
     while True:
-        access_tokens = load_access_tokens()
-        num_accounts = len(access_tokens)
-        current_account_index = 0
+        total_points = 0
+        for i, init_data in enumerate(accounts):
+            print(f"Processing account {i + 1} of {len(accounts)}")
+            username, balance = login(init_data)
+            if username:
+                claim_booster(init_data)
+                points = claim_8_hour_points(init_data)
+                total_points += points
+            time.sleep(5)  # Wait for 5 seconds before processing the next account
 
-        print(f"Total accounts in data.txt: {num_accounts}")
-
-        if num_accounts == 0:
-            print("No accounts found in data.txt. Exiting program.")
-            return
-
-        for access_token in access_tokens:
-            current_account_index += 1
-            print(f"Processing account {current_account_index} of {num_accounts}")
-            
-            # Perform claim request
-            claim_response = perform_claim_request(access_token)
-            
-            if claim_response.status_code == 200:
-                print("Claim request successful.")
-            else:
-                print(f"Claim request failed with status code {claim_response.status_code}.")
-            
-            # Perform farming start request
-            start_response = perform_start_farming_request(access_token)
-            
-            if start_response.status_code == 200:
-                print("Farming start request successful.")
-            else:
-                print(f"Farming start request failed with status code {start_response.status_code}.")
-            
-            # Pause for 5 seconds before processing the next account
-            if current_account_index < num_accounts:
-                print("Waiting for 5 seconds before the next account...")
-                time.sleep(5)
-
-        # After processing all accounts, start 8-hour countdown
-        print("All accounts processed. Starting 8-hour countdown now.")
-
-        countdown_seconds = 8 * 60 * 60  # 8 hours in seconds
-        end_time = datetime.now() + timedelta(seconds=countdown_seconds)
-        while datetime.now() < end_time:
-            time_remaining = int((end_time - datetime.now()).total_seconds())
-            countdown_timer(time_remaining)
-            time.sleep(1)
-        print("\nCountdown completed. Restarting process.")
+        print(f"Total points claimed: {total_points}")
+        print("All accounts processed. Starting 8-hour countdown.")
+        countdown(8 * 60 * 60)  # 8 hours countdown
 
 if __name__ == "__main__":
     main()
