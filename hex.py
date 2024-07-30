@@ -10,6 +10,9 @@ BOOSTER_URL = "https://clicker.hexn.cc/v1/apply-farming-booster"
 CLAIM_URL = "https://clicker.hexn.cc/v1/farming/start"
 DATA_FILE = "data.txt"
 
+# Variabel global untuk menyimpan waktu terakhir klaim booster
+last_booster_claim = datetime.now() - timedelta(days=1)
+
 def read_accounts():
     with open(DATA_FILE, "r") as file:
         return [line.strip() for line in file.readlines()]
@@ -53,6 +56,7 @@ def countdown_timer(seconds):
     sys.stdout.write("\n")
 
 def process_accounts():
+    global last_booster_claim
     accounts = read_accounts()
     num_accounts = len(accounts)
     print(f"Jumlah akun: {num_accounts}")
@@ -64,26 +68,34 @@ def process_accounts():
             # Login
             print("Login...")
             login_response = login(init_data)
-            if 'data' in login_response:
+            if "data" in login_response:
                 balance = login_response["data"].get("balance", "Tidak tersedia")
                 print(f"Balance akun: {balance}")
             else:
                 print("Login gagal atau data tidak tersedia.")
                 continue
             
-            # Claim Booster
-            print("Mengklaim booster...")
-            booster_response = claim_booster(init_data)
-            print("Booster telah diklaim.")
+            # Klaim Booster (hanya 1 hari sekali)
+            now = datetime.now()
+            if now - last_booster_claim >= timedelta(days=1):
+                print("Mengklaim booster...")
+                booster_response = claim_booster(init_data)
+                print("Booster telah diklaim.")
+                last_booster_claim = now
+            else:
+                print("Booster sudah diklaim hari ini.")
             
-            # Claim 8 Hours
+            # Klaim 8 Jam
             print("Mengklaim 8 jam...")
             claim_response = claim_8_hours(init_data)
-            points_amount = claim_response["data"].get("points_amount")
-            if points_amount is not None:
-                print(f"Poin yang didapat: {points_amount}")
+            if "data" in claim_response:
+                points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
+                if points_amount == "Tidak tersedia":
+                    print("Belum waktunya mengklaim 8 jam untuk akun ini.")
+                else:
+                    print(f"Poin yang didapat: {points_amount}")
             else:
-                print("Belum waktunya mengklaim 8 jam untuk akun ini.")
+                print("Data klaim 8 jam tidak tersedia atau terjadi kesalahan.")
 
             # Jeda 5 detik antar akun
             time.sleep(5)
