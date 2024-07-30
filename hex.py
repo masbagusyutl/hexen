@@ -2,6 +2,7 @@ import requests
 import time
 import json
 import sys
+from datetime import datetime, timedelta
 
 # Konstanta
 LOGIN_URL = "https://clicker.hexn.cc/v1/state"
@@ -63,13 +64,8 @@ def process_accounts():
             # Login
             print("Login...")
             login_response = login(init_data)
-            
-            if 'data' in login_response:
-                balance = login_response['data'].get('balance', 'Tidak tersedia')
-                print(f"Balance akun: {balance}")
-            else:
-                print(f"Login gagal untuk akun {idx + 1}. Respons: {login_response}")
-                continue
+            balance = login_response["data"].get("balance", "Tidak tersedia")
+            print(f"Balance akun: {balance}")
             
             # Claim Booster
             print("Mengklaim booster...")
@@ -79,8 +75,10 @@ def process_accounts():
             # Claim 8 Hours
             print("Mengklaim 8 jam...")
             claim_response = claim_8_hours(init_data)
-            points_amount = claim_response['data'].get('points_amount', 'Tidak tersedia')
-            print(f"Poin yang didapat: {points_amount}")
+            # Tidak menampilkan data poin jika tidak ada
+            if "data" in claim_response and "points_amount" in claim_response["data"]:
+                points_amount = claim_response["data"]["points_amount"]
+                print(f"Poin yang didapat: {points_amount}")
 
             # Jeda 5 detik antar akun
             time.sleep(5)
