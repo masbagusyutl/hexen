@@ -9,6 +9,9 @@ def read_accounts(filename='data.txt'):
     with open(filename, 'r') as file:
         for line in file:
             parts = line.strip().split('&')
+            if len(parts) < 2:
+                print(f"Skipping invalid line: {line.strip()}")
+                continue  # Skip lines that don't have at least two parts
             account_data = parts[0]  # Assuming the first part contains the init_data
             username = extract_username(parts[1])  # Extract username from the second part
             accounts.append(account_data)
@@ -20,6 +23,8 @@ def extract_username(query_string):
     username_key = 'username%22%3A%22'
     start = query_string.find(username_key) + len(username_key)
     end = query_string.find('%22', start)
+    if start == -1 or end == -1:
+        return 'Unknown'  # Return a default value if username is not found
     return query_string[start:end]
 
 def login(account):
