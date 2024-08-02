@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 LOGIN_URL = "https://clicker.hexn.cc/v1/state"
 BOOSTER_URL = "https://clicker.hexn.cc/v1/apply-farming-booster"
 CLAIM_URL = "https://clicker.hexn.cc/v1/farming/start"
+FARMING_CLAIM_URL = "https://clicker.hexn.io/v1/farming/claim"
 DATA_FILE = "data.txt"
 
 # Variabel global untuk menyimpan waktu terakhir klaim booster
@@ -39,6 +40,14 @@ def claim_8_hours(init_data):
     }
     payload = {"init_data": init_data}
     response = requests.post(CLAIM_URL, headers=headers, json=payload)
+    return response.json()
+
+def farming_claim(init_data):
+    headers = {
+        "Content-Type": "application/json",
+    }
+    payload = {"init_data": init_data}
+    response = requests.post(FARMING_CLAIM_URL, headers=headers, json=payload)
     return response.json()
 
 def countdown_timer(seconds):
@@ -85,6 +94,15 @@ def process_accounts():
             else:
                 print("Booster sudah diklaim hari ini.")
             
+            # Klaim Farming
+            print("Mengklaim farming...")
+            farming_claim_response = farming_claim(init_data)
+            if "data" in farming_claim_response:
+                balance_after_claim = farming_claim_response["data"].get("balance", "Tidak tersedia")
+                print(f"Balance setelah klaim: {balance_after_claim}")
+            else:
+                print("Data klaim farming tidak tersedia atau terjadi kesalahan.")
+
             # Klaim 8 Jam
             print("Mengklaim 8 jam...")
             claim_response = claim_8_hours(init_data)
