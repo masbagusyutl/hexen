@@ -64,6 +64,9 @@ def countdown_timer(seconds):
         time.sleep(1)
     sys.stdout.write("\n")
 
+def format_timestamp(timestamp):
+    return datetime.fromtimestamp(timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S')
+
 def process_accounts():
     global last_booster_claim
     accounts = read_accounts()
@@ -80,6 +83,13 @@ def process_accounts():
             if "data" in login_response:
                 balance = login_response["data"].get("balance", "Tidak tersedia")
                 print(f"Balance akun: {balance}")
+
+                farming_data = login_response["data"].get("farming", {})
+                if farming_data:
+                    start_at = format_timestamp(farming_data.get("start_at", 0))
+                    end_at = format_timestamp(farming_data.get("end_at", 0))
+                    print(f"Farming mulai pada: {start_at}")
+                    print(f"Bisa farming lagi pada: {end_at}")
             else:
                 print("Login gagal atau data tidak tersedia.")
                 continue
@@ -102,20 +112,20 @@ def process_accounts():
                 print(f"Balance setelah klaim: {balance_after_claim}")
             else:
                 error_message = farming_claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
-                print(f"{error_message}")
+                print(f"Data klaim farming tidak tersedia atau terjadi kesalahan: {error_message}")
 
             # Klaim 8 Jam
-            print("Memulai farming...")
+            print("Mengklaim 8 jam...")
             claim_response = claim_8_hours(init_data)
             if "data" in claim_response:
                 points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
                 if points_amount == "Tidak tersedia":
-                    print("Belum waktunya mulai farming untuk akun ini.")
+                    print("Belum waktunya mengklaim 8 jam untuk akun ini.")
                 else:
                     print(f"Poin yang didapat: {points_amount}")
             else:
                 error_message = claim_response.get("message", "Terjadi kesalahan saat klaim 8 jam.")
-                print(f"{error_message}")
+                print(f"Data klaim 8 jam tidak tersedia atau terjadi kesalahan: {error_message}")
 
             # Jeda 5 detik antar akun
             time.sleep(5)
