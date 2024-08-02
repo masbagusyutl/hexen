@@ -101,19 +101,21 @@ def process_accounts():
                 balance_after_claim = farming_claim_response["data"].get("balance", "Tidak tersedia")
                 print(f"Balance setelah klaim: {balance_after_claim}")
             else:
-                print("Data klaim farming tidak tersedia atau terjadi kesalahan.")
+                error_message = farming_claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
+                print(f"{error_message}")
 
             # Klaim 8 Jam
-            print("Mengklaim 8 jam...")
+            print("Memulai farming...")
             claim_response = claim_8_hours(init_data)
             if "data" in claim_response:
                 points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
                 if points_amount == "Tidak tersedia":
-                    print("Belum waktunya mengklaim 8 jam untuk akun ini.")
+                    print("Belum waktunya mulai farming untuk akun ini.")
                 else:
                     print(f"Poin yang didapat: {points_amount}")
             else:
-                print("Data klaim 8 jam tidak tersedia atau terjadi kesalahan.")
+                error_message = claim_response.get("message", "Terjadi kesalahan saat klaim 8 jam.")
+                print(f"{error_message}")
 
             # Jeda 5 detik antar akun
             time.sleep(5)
