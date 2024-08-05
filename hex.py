@@ -78,11 +78,11 @@ def format_timestamp(timestamp):
 
 def process_accounts():
     global last_booster_claim
-    accounts = read_accounts()
-    num_accounts = len(accounts)
-    print(f"Jumlah akun: {num_accounts}")
+    while True:  # Loop utama agar script mengulang terus-menerus
+        accounts = read_accounts()
+        num_accounts = len(accounts)
+        print(f"Jumlah akun: {num_accounts}")
 
-    while True:
         for idx, init_data in enumerate(accounts):
             print(f"\nMemproses akun {idx + 1}/{num_accounts}")
             
@@ -107,7 +107,9 @@ def process_accounts():
 
                     now = datetime.now()
                     if now < next_farming_time[init_data]:
-                        print("Belum waktunya farming.")
+                        time_to_wait = (next_farming_time[init_data] - now).total_seconds()
+                        print(f"Belum waktunya farming. Menunggu selama {time_to_wait / 3600:.2f} jam...")
+                        countdown_timer(int(time_to_wait))
                     else:
                         print("Waktunya farming. Memulai tugas farming...")
                         farming_claim_response = farming_claim(init_data)
@@ -121,6 +123,13 @@ def process_accounts():
                         else:
                             error_message = farming_claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
                             print(f"{error_message}")
+
+                # Menjalankan login ulang sebelum tugas quest dan klaim booster
+                print("Login ulang untuk memastikan data terbaru...")
+                login_response = login(init_data)
+                if "data" not in login_response:
+                    print("Login gagal atau data tidak tersedia.")
+                    continue
 
                 # Menyelesaikan Tugas Quest
                 quests = login_response["data"].get("quests", {})
@@ -181,14 +190,10 @@ def process_accounts():
 
             # Jeda 5 detik antar akun
             time.sleep(5)
-        
-        # Hitung mundur hingga waktu farming berikutnya
-        if next_farming_time:
-            next_time = min(next_farming_time.values())
-            now = datetime.now()
-            seconds_until_next_farming = (next_time - now).total_seconds()
-            print(f"\nHitung mundur hingga tugas farming berikutnya: {seconds_until_next_farming / 3600:.2f} jam")
-            countdown_timer(int(seconds_until_next_farming))
+
+        # Timer hitung mundur 1 jam sebelum memulai lagi
+        print("\nMenunggu 1 jam sebelum memulai lagi...")
+        countdown_timer(3600)
 
 if __name__ == "__main__":
     process_accounts()
