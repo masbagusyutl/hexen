@@ -107,9 +107,7 @@ def process_accounts():
 
                     now = datetime.now()
                     if now < next_farming_time[init_data]:
-                        time_to_wait = (next_farming_time[init_data] - now).total_seconds()
-                        print(f"Belum waktunya farming. Menunggu selama {time_to_wait / 3600:.2f} jam...")
-                        countdown_timer(int(time_to_wait))
+                        print("Belum waktunya farming. Coba klaim booster atau jalankan tugas quest.")
                     else:
                         print("Waktunya farming. Memulai tugas farming...")
                         farming_claim_response = farming_claim(init_data)
@@ -122,6 +120,19 @@ def process_accounts():
                             print(f"Bisa farming lagi pada: {end_at}")
                         else:
                             error_message = farming_claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
+                            print(f"{error_message}")
+
+                        # Klaim 8 Jam setelah farming
+                        print("Mengklaim 8 jam...")
+                        claim_response = claim_8_hours(init_data)
+                        if "data" in claim_response:
+                            points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
+                            if points_amount == "Tidak tersedia":
+                                print("Belum waktunya mengklaim 8 jam untuk akun ini.")
+                            else:
+                                print(f"Poin yang didapat: {points_amount}")
+                        else:
+                            error_message = claim_response.get("message", "Terjadi kesalahan saat klaim 8 jam.")
                             print(f"{error_message}")
 
                 # Menjalankan login ulang sebelum tugas quest dan klaim booster
@@ -171,19 +182,6 @@ def process_accounts():
                 else:
                     print("Tidak ada data booster tersedia.")
                 
-                # Klaim 8 Jam
-                print("Mengklaim 8 jam...")
-                claim_response = claim_8_hours(init_data)
-                if "data" in claim_response:
-                    points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
-                    if points_amount == "Tidak tersedia":
-                        print("Belum waktunya mengklaim 8 jam untuk akun ini.")
-                    else:
-                        print(f"Poin yang didapat: {points_amount}")
-                else:
-                    error_message = claim_response.get("message", "Terjadi kesalahan saat klaim 8 jam.")
-                    print(f"{error_message}")
-                
             else:
                 print("Login gagal atau data tidak tersedia.")
                 continue
@@ -191,9 +189,13 @@ def process_accounts():
             # Jeda 5 detik antar akun
             time.sleep(5)
 
-        # Timer hitung mundur 1 jam sebelum memulai lagi
-        print("\nMenunggu 1 jam sebelum memulai lagi...")
-        countdown_timer(3600)
+        # Ambil waktu farming berikutnya yang paling lama di antara semua akun
+        if next_farming_time:
+            next_time = max(next_farming_time.values())
+            now = datetime.now()
+            seconds_until_next_farming = (next_time - now).total_seconds()
+            print(f"\nHitung mundur hingga tugas farming berikutnya: {seconds_until_next_farming / 3600:.2f} jam")
+            countdown_timer(int(seconds_until_next_farming))
 
 if __name__ == "__main__":
     process_accounts()
