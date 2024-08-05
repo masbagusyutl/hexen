@@ -1,6 +1,5 @@
 import requests
 import time
-import json
 import sys
 from datetime import datetime, timedelta
 
@@ -14,6 +13,7 @@ DATA_FILE = "data.txt"
 
 # Variabel global untuk menyimpan waktu terakhir klaim booster
 last_booster_claim = datetime.now() - timedelta(days=1)
+next_farming_time = {}
 
 def read_accounts():
     with open(DATA_FILE, "r") as file:
@@ -97,9 +97,14 @@ def process_accounts():
                 if farming_data:
                     start_at = format_timestamp(farming_data.get("start_at", 0))
                     end_at = format_timestamp(farming_data.get("end_at", 0))
+                    points_amount = farming_data.get("points_amount", "Tidak tersedia")
                     print(f"Farming mulai pada: {start_at}")
                     print(f"Bisa farming lagi pada: {end_at}")
-                
+                    print(f"Poin yang akan didapatkan: {points_amount}")
+                    
+                    # Simpan waktu mulai farming berikutnya
+                    next_farming_time[init_data] = datetime.fromtimestamp(farming_data.get("end_at", 0) / 1000)
+
                 # Menyelesaikan Tugas Quest
                 quests = login_response["data"].get("quests", [])
                 for quest in quests:
@@ -169,9 +174,12 @@ def process_accounts():
             # Jeda 5 detik antar akun
             time.sleep(5)
         
-        # Hitung mundur 8 jam
-        print("\nHitung mundur 8 jam dimulai...")
-        countdown_timer(28800)  # 8 hours in seconds
+        # Hitung mundur ke waktu farming berikutnya
+        next_time = min(next_farming_time.values())
+        now = datetime.now()
+        seconds_until_next_farming = (next_time - now).total_seconds()
+        print(f"\nHitung mundur hingga tugas farming berikutnya: {seconds_until_next_farming / 3600:.2f} jam")
+        countdown_timer(int(seconds_until_next_farming))
 
 if __name__ == "__main__":
     process_accounts()
