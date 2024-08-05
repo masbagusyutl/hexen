@@ -9,6 +9,7 @@ LOGIN_URL = "https://clicker.hexn.cc/v1/state"
 BOOSTER_URL = "https://clicker.hexn.cc/v1/apply-farming-booster"
 CLAIM_URL = "https://clicker.hexn.cc/v1/farming/start"
 FARMING_CLAIM_URL = "https://clicker.hexn.io/v1/farming/claim"
+QUEST_URL = "https://clicker.hexn.io/v1/executed-quest/start"
 DATA_FILE = "data.txt"
 
 # Variabel global untuk menyimpan waktu terakhir klaim booster
@@ -26,11 +27,11 @@ def login(init_data):
     response = requests.post(LOGIN_URL, headers=headers, json=payload)
     return response.json()
 
-def claim_booster(init_data):
+def claim_booster(init_data, booster_id):
     headers = {
         "Content-Type": "application/json",
     }
-    payload = {"init_data": init_data}
+    payload = {"init_data": init_data, "booster_id": booster_id}
     response = requests.post(BOOSTER_URL, headers=headers, json=payload)
     return response.json()
 
@@ -48,6 +49,14 @@ def farming_claim(init_data):
     }
     payload = {"init_data": init_data}
     response = requests.post(FARMING_CLAIM_URL, headers=headers, json=payload)
+    return response.json()
+
+def execute_quest(init_data, quest_id):
+    headers = {
+        "Content-Type": "application/json",
+    }
+    payload = {"init_data": init_data, "quest_id": quest_id}
+    response = requests.post(QUEST_URL, headers=headers, json=payload)
     return response.json()
 
 def countdown_timer(seconds):
@@ -90,44 +99,71 @@ def process_accounts():
                     end_at = format_timestamp(farming_data.get("end_at", 0))
                     print(f"Farming mulai pada: {start_at}")
                     print(f"Bisa farming lagi pada: {end_at}")
+                
+                # Klaim Booster (hanya 1 hari sekali)
+                farming_boosters = login_response["data"].get("farming_boosters", [])
+                if farming_boosters:
+                    booster_id = farming_boosters[0].get("id")
+                    booster_description = farming_boosters[0].get("description")
+                    booster_time = farming_boosters[0].get("time_after_parent_booster")
+
+                    now = datetime.now()
+                    if now - last_booster_claim >= timedelta(days=1):
+                        print("Mengklaim booster...")
+                        booster_response = claim_booster(init_data, booster_id)
+                        print(f"Booster telah diklaim: {booster_description}")
+                        print(f"Booster berlaku selama: {booster_time}")
+                        last_booster_claim = now
+                    else:
+                        print("Booster sudah diklaim hari ini.")
+                else:
+                    print("Tidak ada data booster tersedia.")
+                
+                # Klaim Farming
+                print("Mengklaim farming...")
+                farming_claim_response = farming_claim(init_data)
+                if "data" in farming_claim_response:
+                    balance_after_claim = farming_claim_response["data"].get("balance", "Tidak tersedia")
+                    print(f"Balance setelah klaim: {balance_after_claim}")
+                else:
+                    error_message = farming_claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
+                    print(f"{error_message}")
+                    print(f"Data klaim farming tidak tersedia atau atau belum waktunya")
+
+                # Klaim 8 Jam
+                print("Mengklaim 8 jam...")
+                claim_response = claim_8_hours(init_data)
+                if "data" in claim_response:
+                    points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
+                    if points_amount == "Tidak tersedia":
+                        print("Belum waktunya mengklaim 8 jam untuk akun ini.")
+                    else:
+                        print(f"Poin yang didapat: {points_amount}")
+                else:
+                    error_message = claim_response.get("message", "Terjadi kesalahan saat klaim 8 jam.")
+                    print(f"{error_message}")
+                    print(f"Data poin klaim 8 jam tidak tersedia atau belum waktunya")
+                
+                # Menyelesaikan Tugas Quest
+                quests = login_response["data"].get("quests", [])
+                for quest in quests:
+                    quest_id = quest.get("id")
+                    quest_description = quest.get("description")
+                    quest_points = quest.get("points_amount")
+                    print(f"Menyelesaikan tugas: {quest_description}")
+                    quest_response = execute_quest(init_data, quest_id)
+                    if "data" in quest_response:
+                        print(f"Tugas selesai: {quest_description}")
+                        print(f"Poin yang didapat: {quest_points}")
+                    else:
+                        error_message = quest_response.get("message", "Terjadi kesalahan saat menyelesaikan tugas.")
+                        print(f"{error_message}")
+                        print(f"Data tugas tidak tersedia atau belum waktunya")
+                    time.sleep(2)
+
             else:
                 print("Login gagal atau data tidak tersedia.")
                 continue
-            
-            # Klaim Booster (hanya 1 hari sekali)
-            now = datetime.now()
-            if now - last_booster_claim >= timedelta(days=1):
-                print("Mengklaim booster...")
-                booster_response = claim_booster(init_data)
-                print("Booster telah diklaim.")
-                last_booster_claim = now
-            else:
-                print("Booster sudah diklaim hari ini.")
-            
-            # Klaim Farming
-            print("Mengklaim farming...")
-            farming_claim_response = farming_claim(init_data)
-            if "data" in farming_claim_response:
-                balance_after_claim = farming_claim_response["data"].get("balance", "Tidak tersedia")
-                print(f"Balance setelah klaim: {balance_after_claim}")
-            else:
-                error_message = farming_claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
-                print(f"{error_message}")
-                print(f"Data klaim farming tidak tersedia atau atau belum waktunya")
-
-            # Klaim 8 Jam
-            print("Mengklaim 8 jam...")
-            claim_response = claim_8_hours(init_data)
-            if "data" in claim_response:
-                points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
-                if points_amount == "Tidak tersedia":
-                    print("Belum waktunya mengklaim 8 jam untuk akun ini.")
-                else:
-                    print(f"Poin yang didapat: {points_amount}")
-            else:
-                error_message = claim_response.get("message", "Terjadi kesalahan saat klaim 8 jam.")
-                print(f"{error_message}")
-                print(f"Data poin klaim 8 jam tidak tersedia atau belum waktunya")
 
             # Jeda 5 detik antar akun
             time.sleep(5)
