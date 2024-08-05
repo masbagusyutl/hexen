@@ -123,9 +123,8 @@ def process_accounts():
                             print(f"{error_message}")
 
                 # Menyelesaikan Tugas Quest
-                quests = login_response["data"].get("quests", [])
-                for quest in quests:
-                    quest_id = quest.get("id")
+                quests = login_response["data"].get("quests", {})
+                for quest_id, quest in quests.items():
                     quest_description = quest.get("description")
                     quest_points = quest.get("points_amount")
                     print(f"Menyelesaikan tugas: {quest_description} (ID: {quest_id})")
@@ -139,25 +138,27 @@ def process_accounts():
                     time.sleep(2)
 
                 # Klaim Booster (hanya 1 hari sekali)
-                farming_boosters = login_response["data"].get("farming_boosters", [])
+                farming_boosters = login_response["data"].get("farming_boosters", {})
                 if farming_boosters:
-                    booster_id = farming_boosters[0].get("id")
-                    booster_description = farming_boosters[0].get("description")
-                    booster_time = farming_boosters[0].get("time_after_parent_booster")
+                    for booster_id, booster in farming_boosters.items():
+                        booster_description = booster.get("description")
+                        booster_time = booster.get("time_after_parent_booster")
 
-                    now = datetime.now()
-                    if now - last_booster_claim >= timedelta(days=1):
-                        print("Mengklaim booster...")
-                        booster_response = claim_booster(init_data, booster_id)
-                        if "data" in booster_response:
-                            print(f"Booster telah diklaim: {booster_description}")
-                            print(f"Booster berlaku selama: {booster_time}")
-                            last_booster_claim = now
+                        now = datetime.now()
+                        if now - last_booster_claim >= timedelta(days=1):
+                            print("Mengklaim booster...")
+                            booster_response = claim_booster(init_data, booster_id)
+                            if "data" in booster_response:
+                                print(f"Booster telah diklaim: {booster_description}")
+                                print(f"Booster berlaku selama: {booster_time}")
+                                last_booster_claim = now
+                            else:
+                                error_message = booster_response.get("message", "Terjadi kesalahan saat klaim booster.")
+                                print(f"{error_message}")
+                            break
                         else:
-                            error_message = booster_response.get("message", "Terjadi kesalahan saat klaim booster.")
-                            print(f"{error_message}")
-                    else:
-                        print("Booster sudah diklaim hari ini.")
+                            print("Booster sudah diklaim hari ini.")
+                            break
                 else:
                     print("Tidak ada data booster tersedia.")
                 
