@@ -108,7 +108,6 @@ def process_accounts():
                     now = datetime.now()
                     if now < next_farming_time[init_data]:
                         print("Belum waktunya farming.")
-                        continue
                     else:
                         print("Waktunya farming. Memulai tugas farming...")
                         farming_claim_response = farming_claim(init_data)
