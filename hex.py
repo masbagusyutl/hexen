@@ -11,9 +11,10 @@ FARMING_CLAIM_URL = "https://clicker.hexn.io/v1/farming/claim"
 QUEST_URL = "https://clicker.hexn.io/v1/executed-quest/start"
 DATA_FILE = "data.txt"
 
-# Variabel global untuk menyimpan waktu terakhir klaim booster
+# Variabel global untuk menyimpan waktu terakhir klaim booster dan booster_id
 last_booster_claim = datetime.now() - timedelta(days=1)
 next_farming_time = {}
+booster_id = 1  # Mulai dengan booster_id 1
 
 def read_accounts():
     with open(DATA_FILE, "r") as file:
@@ -78,6 +79,8 @@ def format_timestamp(timestamp):
 
 def process_accounts():
     global last_booster_claim
+    global booster_id
+
     while True:  # Loop utama agar script mengulang terus-menerus
         accounts = read_accounts()
         num_accounts = len(accounts)
@@ -85,10 +88,11 @@ def process_accounts():
 
         for idx, init_data in enumerate(accounts):
             print(f"\nMemproses akun {idx + 1}/{num_accounts}")
-            
+
             # Login
             print("Login...")
             login_response = login(init_data)
+            print(f"Respons login: {login_response}")  # Debug print untuk memeriksa respons login
             if "data" in login_response:
                 balance = login_response["data"].get("balance", "Tidak tersedia")
                 print(f"Balance akun: {balance}")
@@ -101,7 +105,7 @@ def process_accounts():
                     print(f"Farming mulai pada: {start_at}")
                     print(f"Bisa farming lagi pada: {end_at}")
                     print(f"Poin yang akan didapatkan: {points_amount}")
-                    
+
                     # Simpan waktu mulai farming berikutnya
                     next_farming_time[init_data] = datetime.fromtimestamp(farming_data.get("end_at", 0) / 1000)
 
@@ -109,6 +113,7 @@ def process_accounts():
                     if now >= next_farming_time[init_data]:
                         print("Waktunya farming. Memulai tugas farming...")
                         farming_claim_response = farming_claim(init_data)
+                        print(f"Respons farming claim: {farming_claim_response}")  # Debug print untuk memeriksa respons farming claim
                         if "data" in farming_claim_response:
                             points_amount = farming_claim_response["data"].get("points_amount", "Tidak tersedia")
                             start_at = format_timestamp(farming_claim_response["data"].get("start_at", 0))
@@ -123,6 +128,7 @@ def process_accounts():
                         # Klaim 8 Jam setelah farming
                         print("Mengklaim 8 jam...")
                         claim_response = claim_8_hours(init_data)
+                        print(f"Respons klaim 8 jam: {claim_response}")  # Debug print untuk memeriksa respons klaim 8 jam
                         if "data" in claim_response:
                             points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
                             if points_amount == "Tidak tersedia":
@@ -137,30 +143,21 @@ def process_accounts():
                 else:
                     print("Tidak ada data farming yang tersedia.")
 
-                # Klaim Booster (hanya 1 hari sekali)
-                farming_boosters = login_response["data"].get("farming_boosters", {})
-                if farming_boosters:
-                    for booster_id, booster in farming_boosters.items():
-                        booster_description = booster.get("description")
-                        booster_time = booster.get("time_after_parent_booster")
-
-                        now = datetime.now()
-                        if now - last_booster_claim >= timedelta(days=1):
-                            print("Mengklaim booster...")
-                            booster_response = claim_booster(init_data, booster_id)
-                            if "data" in booster_response:
-                                print(f"Booster telah diklaim: {booster_description}")
-                                print(f"Booster berlaku selama: {booster_time}")
-                                last_booster_claim = now
-                            else:
-                                error_message = booster_response.get("message", "Terjadi kesalahan saat klaim booster.")
-                                print(f"{error_message}")
-                            break
-                        else:
-                            print("Booster sudah diklaim hari ini.")
-                            break
+                # Klaim Booster
+                now = datetime.now()
+                if now - last_booster_claim >= timedelta(days=1):
+                    print("Mengklaim booster...")
+                    booster_response = claim_booster(init_data, booster_id)
+                    print(f"Respons klaim booster: {booster_response}")  # Debug print untuk memeriksa respons klaim booster
+                    if "data" in booster_response:
+                        print(f"Booster ID {booster_id} telah diklaim")
+                        last_booster_claim = now
+                        booster_id = (booster_id % 9) + 1  # Increment booster_id, reset ke 1 jika lebih dari 9
+                    else:
+                        error_message = booster_response.get("message", "Terjadi kesalahan saat klaim booster.")
+                        print(f"{error_message}")
                 else:
-                    print("Tidak ada data booster tersedia.")
+                    print("Booster sudah diklaim hari ini.")
 
                 # Menyelesaikan Tugas Quest
                 quests = login_response["data"].get("quests", {})
@@ -170,6 +167,7 @@ def process_accounts():
                         quest_points = quest.get("points_amount")
                         print(f"Menyelesaikan tugas: {quest_description} (ID: {quest_id})")
                         quest_response = execute_quest(init_data, quest_id)
+                        print(f"Respons quest: {quest_response}")  # Debug print untuk memeriksa respons quest
                         if "data" in quest_response:
                             print(f"Tugas selesai: {quest_description}")
                             print(f"Poin yang didapat: {quest_points}")
