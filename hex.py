@@ -105,13 +105,31 @@ def process_accounts():
                     # Simpan waktu mulai farming berikutnya
                     next_farming_time[init_data] = datetime.fromtimestamp(farming_data.get("end_at", 0) / 1000)
 
+                    now = datetime.now()
+                    if now < next_farming_time[init_data]:
+                        print("Belum waktunya farming.")
+                        continue
+                    else:
+                        print("Waktunya farming. Memulai tugas farming...")
+                        farming_claim_response = farming_claim(init_data)
+                        if "data" in farming_claim_response:
+                            points_amount = farming_claim_response["data"].get("points_amount", "Tidak tersedia")
+                            start_at = format_timestamp(farming_claim_response["data"].get("start_at", 0))
+                            end_at = format_timestamp(farming_claim_response["data"].get("end_at", 0))
+                            print(f"Poin yang didapat dari farming: {points_amount}")
+                            print(f"Farming mulai pada: {start_at}")
+                            print(f"Bisa farming lagi pada: {end_at}")
+                        else:
+                            error_message = farming_claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
+                            print(f"{error_message}")
+
                 # Menyelesaikan Tugas Quest
                 quests = login_response["data"].get("quests", [])
                 for quest in quests:
                     quest_id = quest.get("id")
                     quest_description = quest.get("description")
                     quest_points = quest.get("points_amount")
-                    print(f"Menyelesaikan tugas: {quest_description}")
+                    print(f"Menyelesaikan tugas: {quest_description} (ID: {quest_id})")
                     quest_response = execute_quest(init_data, quest_id)
                     if "data" in quest_response:
                         print(f"Tugas selesai: {quest_description}")
@@ -157,16 +175,6 @@ def process_accounts():
                     error_message = claim_response.get("message", "Terjadi kesalahan saat klaim 8 jam.")
                     print(f"{error_message}")
                 
-                # Klaim Farming
-                print("Mengklaim farming...")
-                farming_claim_response = farming_claim(init_data)
-                if "data" in farming_claim_response:
-                    balance_after_claim = farming_claim_response["data"].get("balance", "Tidak tersedia")
-                    print(f"Balance setelah klaim: {balance_after_claim}")
-                else:
-                    error_message = farming_claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
-                    print(f"{error_message}")
-
             else:
                 print("Login gagal atau data tidak tersedia.")
                 continue
@@ -174,12 +182,13 @@ def process_accounts():
             # Jeda 5 detik antar akun
             time.sleep(5)
         
-        # Hitung mundur ke waktu farming berikutnya
-        next_time = min(next_farming_time.values())
-        now = datetime.now()
-        seconds_until_next_farming = (next_time - now).total_seconds()
-        print(f"\nHitung mundur hingga tugas farming berikutnya: {seconds_until_next_farming / 3600:.2f} jam")
-        countdown_timer(int(seconds_until_next_farming))
+        # Hitung mundur hingga waktu farming berikutnya
+        if next_farming_time:
+            next_time = min(next_farming_time.values())
+            now = datetime.now()
+            seconds_until_next_farming = (next_time - now).total_seconds()
+            print(f"\nHitung mundur hingga tugas farming berikutnya: {seconds_until_next_farming / 3600:.2f} jam")
+            countdown_timer(int(seconds_until_next_farming))
 
 if __name__ == "__main__":
     process_accounts()
