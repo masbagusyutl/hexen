@@ -164,18 +164,21 @@ def process_accounts():
 
                 # Menyelesaikan Tugas Quest
                 quests = login_response["data"].get("quests", {})
-                for quest_id, quest in quests.items():
-                    quest_description = quest.get("description")
-                    quest_points = quest.get("points_amount")
-                    print(f"Menyelesaikan tugas: {quest_description} (ID: {quest_id})")
-                    quest_response = execute_quest(init_data, quest_id)
-                    if "data" in quest_response:
-                        print(f"Tugas selesai: {quest_description}")
-                        print(f"Poin yang didapat: {quest_points}")
-                    else:
-                        error_message = quest_response.get("message", "Terjadi kesalahan saat menyelesaikan tugas.")
-                        print(f"{error_message}")
-                    time.sleep(2)
+                if quests:
+                    for quest_id, quest in quests.items():
+                        quest_description = quest.get("description")
+                        quest_points = quest.get("points_amount")
+                        print(f"Menyelesaikan tugas: {quest_description} (ID: {quest_id})")
+                        quest_response = execute_quest(init_data, quest_id)
+                        if "data" in quest_response:
+                            print(f"Tugas selesai: {quest_description}")
+                            print(f"Poin yang didapat: {quest_points}")
+                        else:
+                            error_message = quest_response.get("message", "Terjadi kesalahan saat menyelesaikan tugas.")
+                            print(f"{error_message}")
+                        time.sleep(2)
+                else:
+                    print("Tidak ada data tugas quest yang tersedia.")
                 
             else:
                 print("Login gagal atau data tidak tersedia.")
