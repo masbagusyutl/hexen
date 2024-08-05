@@ -106,9 +106,7 @@ def process_accounts():
                     next_farming_time[init_data] = datetime.fromtimestamp(farming_data.get("end_at", 0) / 1000)
 
                     now = datetime.now()
-                    if now < next_farming_time[init_data]:
-                        print("Belum waktunya farming. Coba klaim booster atau jalankan tugas quest.")
-                    else:
+                    if now >= next_farming_time[init_data]:
                         print("Waktunya farming. Memulai tugas farming...")
                         farming_claim_response = farming_claim(init_data)
                         if "data" in farming_claim_response:
@@ -134,28 +132,10 @@ def process_accounts():
                         else:
                             error_message = claim_response.get("message", "Terjadi kesalahan saat klaim 8 jam.")
                             print(f"{error_message}")
-
-                # Menjalankan login ulang sebelum tugas quest dan klaim booster
-                print("Login ulang untuk memastikan data terbaru...")
-                login_response = login(init_data)
-                if "data" not in login_response:
-                    print("Login gagal atau data tidak tersedia.")
-                    continue
-
-                # Menyelesaikan Tugas Quest
-                quests = login_response["data"].get("quests", {})
-                for quest_id, quest in quests.items():
-                    quest_description = quest.get("description")
-                    quest_points = quest.get("points_amount")
-                    print(f"Menyelesaikan tugas: {quest_description} (ID: {quest_id})")
-                    quest_response = execute_quest(init_data, quest_id)
-                    if "data" in quest_response:
-                        print(f"Tugas selesai: {quest_description}")
-                        print(f"Poin yang didapat: {quest_points}")
                     else:
-                        error_message = quest_response.get("message", "Terjadi kesalahan saat menyelesaikan tugas.")
-                        print(f"{error_message}")
-                    time.sleep(2)
+                        print("Belum waktunya farming. Coba klaim booster atau jalankan tugas quest.")
+                else:
+                    print("Tidak ada data farming yang tersedia.")
 
                 # Klaim Booster (hanya 1 hari sekali)
                 farming_boosters = login_response["data"].get("farming_boosters", {})
@@ -181,6 +161,21 @@ def process_accounts():
                             break
                 else:
                     print("Tidak ada data booster tersedia.")
+
+                # Menyelesaikan Tugas Quest
+                quests = login_response["data"].get("quests", {})
+                for quest_id, quest in quests.items():
+                    quest_description = quest.get("description")
+                    quest_points = quest.get("points_amount")
+                    print(f"Menyelesaikan tugas: {quest_description} (ID: {quest_id})")
+                    quest_response = execute_quest(init_data, quest_id)
+                    if "data" in quest_response:
+                        print(f"Tugas selesai: {quest_description}")
+                        print(f"Poin yang didapat: {quest_points}")
+                    else:
+                        error_message = quest_response.get("message", "Terjadi kesalahan saat menyelesaikan tugas.")
+                        print(f"{error_message}")
+                    time.sleep(2)
                 
             else:
                 print("Login gagal atau data tidak tersedia.")
