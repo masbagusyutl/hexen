@@ -114,7 +114,6 @@ def process_accounts():
                     else:
                         error_message = quest_response.get("message", "Terjadi kesalahan saat menyelesaikan tugas.")
                         print(f"{error_message}")
-                        print(f"Data tugas tidak tersedia atau belum waktunya")
                     time.sleep(2)
 
                 # Klaim Booster (hanya 1 hari sekali)
@@ -128,9 +127,13 @@ def process_accounts():
                     if now - last_booster_claim >= timedelta(days=1):
                         print("Mengklaim booster...")
                         booster_response = claim_booster(init_data, booster_id)
-                        print(f"Booster telah diklaim: {booster_description}")
-                        print(f"Booster berlaku selama: {booster_time}")
-                        last_booster_claim = now
+                        if "data" in booster_response:
+                            print(f"Booster telah diklaim: {booster_description}")
+                            print(f"Booster berlaku selama: {booster_time}")
+                            last_booster_claim = now
+                        else:
+                            error_message = booster_response.get("message", "Terjadi kesalahan saat klaim booster.")
+                            print(f"{error_message}")
                     else:
                         print("Booster sudah diklaim hari ini.")
                 else:
@@ -148,7 +151,6 @@ def process_accounts():
                 else:
                     error_message = claim_response.get("message", "Terjadi kesalahan saat klaim 8 jam.")
                     print(f"{error_message}")
-                    print(f"Data poin klaim 8 jam tidak tersedia atau belum waktunya")
                 
                 # Klaim Farming
                 print("Mengklaim farming...")
@@ -159,7 +161,6 @@ def process_accounts():
                 else:
                     error_message = farming_claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
                     print(f"{error_message}")
-                    print(f"Data klaim farming tidak tersedia atau atau belum waktunya")
 
             else:
                 print("Login gagal atau data tidak tersedia.")
