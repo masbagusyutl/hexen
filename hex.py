@@ -92,7 +92,6 @@ def process_accounts():
             # Login
             print("Login...")
             login_response = login(init_data)
-            print(f"Respons login: {login_response}")  # Debug print untuk memeriksa respons login
             if "data" in login_response:
                 balance = login_response["data"].get("balance", "Tidak tersedia")
                 print(f"Balance akun: {balance}")
