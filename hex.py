@@ -112,28 +112,26 @@ def process_accounts():
                     if now >= next_farming_time[init_data]:
                         print("Waktunya farming. Memulai tugas farming...")
                         farming_claim_response = farming_claim(init_data)
-                        print(f"Respons farming claim: {farming_claim_response}")  # Debug print untuk memeriksa respons farming claim
                         if "data" in farming_claim_response:
-                            points_amount = farming_claim_response["data"].get("points_amount", "Tidak tersedia")
-                            start_at = format_timestamp(farming_claim_response["data"].get("start_at", 0))
-                            end_at = format_timestamp(farming_claim_response["data"].get("end_at", 0))
-                            print(f"Poin yang didapat dari farming: {points_amount}")
-                            print(f"Farming mulai pada: {start_at}")
-                            print(f"Bisa farming lagi pada: {end_at}")
+                            points_amount = farming_claim_response["data"].get("balance", "Tidak tersedia")
+                            print(f"Balance setelah memulai farming: {points_amount}")
                         else:
                             error_message = farming_claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
                             print(f"{error_message}")
 
                         # Klaim 8 Jam setelah farming
-                        print("Mengklaim 8 jam...")
+                        print("Mengklaim farming...")
                         claim_response = claim_8_hours(init_data)
-                        print(f"Respons klaim 8 jam: {claim_response}")  # Debug print untuk memeriksa respons klaim 8 jam
                         if "data" in claim_response:
                             points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
+                            start_at = format_timestamp(claim_response.get("start_at", 0))
+                            end_at = format_timestamp(claim_response.get("end_at", 0))
                             if points_amount == "Tidak tersedia":
-                                print("Belum waktunya mengklaim 8 jam untuk akun ini.")
+                                print("Belum waktunya mengklaim farming untuk akun ini.")
                             else:
                                 print(f"Poin yang didapat: {points_amount}")
+                                print(f"Klaim farming mulai pada: {start_at}")
+                                print(f"Bisa farming lagi pada: {end_at}")
                         else:
                             error_message = claim_response.get("message", "Terjadi kesalahan saat klaim 8 jam.")
                             print(f"{error_message}")
