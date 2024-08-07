@@ -10,6 +10,7 @@ CLAIM_URL = "https://clicker.hexn.cc/v1/farming/start"
 FARMING_CLAIM_URL = "https://clicker.hexn.io/v1/farming/claim"
 QUEST_URL = "https://clicker.hexn.io/v1/executed-quest/start"
 DATA_FILE = "data.txt"
+ERROR_LOG_FILE = "error_log.txt"
 
 # Variabel global untuk menyimpan waktu terakhir klaim booster
 last_booster_claim = datetime.now() - timedelta(days=1)
@@ -76,6 +77,11 @@ def countdown_timer(seconds):
 def format_timestamp(timestamp):
     return datetime.fromtimestamp(timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
+def log_error(task, error_message, response):
+    with open(ERROR_LOG_FILE, "a") as file:
+        file.write(f"Error pada {task}: {error_message}\n")
+        file.write(f"Respon: {response}\n\n")
+
 def process_accounts():
     global last_booster_claim
     while True:  # Loop utama agar script mengulang terus-menerus
@@ -119,6 +125,7 @@ def process_accounts():
                         else:
                             error_message = farming_claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
                             print(f"{error_message}")
+                            log_error("farming_claim", error_message, farming_claim_response)
 
                         # Klaim 8 Jam setelah farming
                         print("Mengklaim Farming...")
@@ -132,6 +139,7 @@ def process_accounts():
                         else:
                             error_message = claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
                             print(f"{error_message}")
+                            log_error("claim_8_hours", error_message, claim_response)
                     else:
                         print("Belum waktunya farming. Coba klaim booster atau jalankan tugas quest.")
                 else:
@@ -140,60 +148,47 @@ def process_accounts():
                 # Klaim Booster (hanya 1 hari sekali)
                 applied_boosters = login_response["data"].get("applied_boosters", {})
                 farming_boosters = login_response["data"].get("config", {}).get("farming_boosters", {})
+                if farming_boosters:
+                    last_booster_id = max(map(int, applied_boosters.keys()), default=0)
+                    next_booster_id = last_booster_id + 1 if last_booster_id < 9 else 1
 
-                if applied_boosters:
-                    last_booster_id = max(applied_boosters, key=lambda k: applied_boosters[k])
-                    last_booster_time = datetime.fromtimestamp(applied_boosters[last_booster_id] / 1000)
-                    days_since_last_booster = (datetime.now() - last_booster_time).days
-
-                    booster_ids = list(farming_boosters.keys())
-                    if days_since_last_booster < len(booster_ids):
-                        next_booster_id = str(int(last_booster_id) + 1)
-                        booster = farming_boosters.get(next_booster_id, {})
-                        booster_description = booster.get("description", "Deskripsi tidak tersedia")
-                        booster_time = booster.get("time_after_parent_booster", "Durasi tidak tersedia")
-
-                        print(f"Booster yang terakhir diklaim: ID {last_booster_id} pada hari ke-{days_since_last_booster}")
-                        print(f"Mengklaim booster hari ke-{days_since_last_booster + 1} dengan ID {next_booster_id}...")
-                        if datetime.now() - last_booster_claim >= timedelta(days=1):
+                    if next_booster_id in farming_boosters:
+                        booster_description = farming_boosters[next_booster_id].get("description", "Deskripsi tidak tersedia")
+                        booster_time = farming_boosters[next_booster_id].get("time_after_parent_booster", "Tidak tersedia")
+                        
+                        now = datetime.now()
+                        if now - last_booster_claim >= timedelta(days=1):
+                            print(f"Mengklaim booster hari ke-{next_booster_id}...")
                             booster_response = claim_booster(init_data, next_booster_id)
                             if "data" in booster_response:
                                 print(f"Booster telah diklaim: {booster_description}")
                                 print(f"Booster berlaku selama: {booster_time}")
-                                last_booster_claim = datetime.now()
+                                last_booster_claim = now
                             else:
                                 error_message = booster_response.get("message", "Terjadi kesalahan saat klaim booster.")
                                 print(f"{error_message}")
+                                log_error("claim_booster", error_message, booster_response)
                         else:
                             print("Booster sudah diklaim hari ini.")
                     else:
-                        print("Semua booster sudah diklaim hari ini.")
+                        print("Booster berikutnya tidak tersedia.")
                 else:
-                    print("Tidak ada data booster tersedia. Mulai klaim booster dari ID 1 (hari ke-1).")
-                    if datetime.now() - last_booster_claim >= timedelta(days=1):
-                        next_booster_id = "1"
-                        booster = farming_boosters.get(next_booster_id, {})
-                        booster_description = booster.get("description", "Deskripsi tidak tersedia")
-                        booster_time = booster.get("time_after_parent_booster", "Durasi tidak tersedia")
-
-                        print(f"Mengklaim booster hari ke-1 dengan ID {next_booster_id}...")
-                        booster_response = claim_booster(init_data, next_booster_id)
-                        if "data" in booster_response:
-                            print(f"Booster telah diklaim: {booster_description}")
-                            print(f"Booster berlaku selama: {booster_time}")
-                            last_booster_claim = datetime.now()
-                        else:
-                            error_message = booster_response.get("message", "Terjadi kesalahan saat klaim booster.")
-                            print(f"{error_message}")
+                    print("Tidak ada data booster tersedia. Mulai dari hari ke-1.")
+                    next_booster_id = 1
+                    booster_response = claim_booster(init_data, next_booster_id)
+                    if "data" in booster_response:
+                        print(f"Booster hari ke-1 telah diklaim.")
+                        last_booster_claim = datetime.now()
                     else:
-                        print("Booster sudah diklaim hari ini.")
+                        error_message = booster_response.get("message", "Terjadi kesalahan saat klaim booster.")
+                        print(f"{error_message}")
+                        log_error("claim_booster", error_message, booster_response)
 
                 # Menyelesaikan Tugas Quest
                 executed_quests = login_response["data"].get("executed_quests", {})
                 quests = login_response["data"].get("config", {}).get("quests", {})
-                completed_quests_count = 0
-
                 if quests:
+                    completed_quests_count = 0
                     for quest_id, quest in quests.items():
                         if executed_quests.get(quest_id, False):
                             completed_quests_count += 1
@@ -209,14 +204,19 @@ def process_accounts():
                         else:
                             error_message = quest_response.get("message", "Terjadi kesalahan saat menyelesaikan tugas.")
                             print(f"{error_message}")
+                            log_error("execute_quest", error_message, quest_response)
                         time.sleep(2)
 
-                print(f"Jumlah tugas yang telah diselesaikan: {completed_quests_count}")
-
+                    print(f"Total tugas yang sudah diselesaikan: {completed_quests_count}")
+                else:
+                    print("Tidak ada data tugas tersedia.")
             else:
-                print(f"Login gagal untuk akun {idx + 1}. Mengabaikan akun ini.")
-
-            time.sleep(5)  # Jeda 5 detik antar akun
+                error_message = login_response.get("message", "Terjadi kesalahan saat login.")
+                print(f"{error_message}")
+                log_error("login", error_message, login_response)
+            
+            # Tunggu 5 detik sebelum memproses akun berikutnya
+            time.sleep(5)
 
         # Menunggu hingga waktu farming berikutnya
         if next_farming_time:
@@ -227,6 +227,5 @@ def process_accounts():
                 print(f"Menunggu hingga {format_timestamp(next_time.timestamp() * 1000)}")
                 countdown_timer(int(seconds_until_next_farming))
 
-# Memulai proses
 if __name__ == "__main__":
     process_accounts()
