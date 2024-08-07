@@ -157,7 +157,7 @@ def process_accounts():
                     print("Booster sudah diklaim hari ini.")
 
                 # Menyelesaikan Tugas Quest
-                quests = login_response["data"].get("quests", {})
+                quests = login_response["data"].get("config").get("quests", {})
                 if quests:
                     for quest_id, quest in quests.items():
                         quest_description = quest.get("description")
