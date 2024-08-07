@@ -81,13 +81,21 @@ def execute_quest(init_data, executed_quests):
     quests_to_complete = {}
     total_completed = 0
     
-    for quest_id, quest_info in executed_quests.items():
-        if not quest_info.get('completed', False):
-            quests_to_complete[quest_id] = quest_info
+    # Periksa tipe data dari executed_quests
+    if isinstance(executed_quests, dict):
+        for quest_id, quest_info in executed_quests.items():
+            if isinstance(quest_info, dict):
+                if not quest_info.get('completed', False):
+                    quests_to_complete[quest_id] = quest_info
+            elif isinstance(quest_info, bool):
+                if not quest_info:
+                    quests_to_complete[quest_id] = {"description": "Unknown", "points_amount": "Unknown"}
+            else:
+                print(f"Data format tidak dikenali untuk quest ID {quest_id}.")
     
     if quests_to_complete:
         for quest_id, quest_info in quests_to_complete.items():
-            quest_description = quest_info.get("description")
+            quest_description = quest_info.get("description", f"Tugas ID {quest_id}")
             print(f"Menyelesaikan tugas: {quest_description} (ID: {quest_id})")
             payload = {"init_data": init_data, "quest_id": quest_id}
             response = requests.post(QUEST_URL, headers=headers, json=payload)
