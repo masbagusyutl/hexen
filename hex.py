@@ -27,35 +27,13 @@ def login(init_data):
     response = requests.post(LOGIN_URL, headers=headers, json=payload)
     return response.json()
 
-def claim_booster(init_data, applied_boosters):
+def claim_booster(init_data, booster_id):
     headers = {
         "Content-Type": "application/json",
     }
-    
-    # Menentukan booster_id berikutnya yang akan diklaim
-    now = datetime.now()
-    booster_id_to_claim = None
-
-    # Ambil booster_id terakhir yang diklaim
-    if applied_boosters:
-        last_booster_id = max(applied_boosters.keys(), key=int)
-        last_booster_timestamp = applied_boosters[last_booster_id]
-        last_booster_date = datetime.fromtimestamp(last_booster_timestamp / 1000)
-        
-        # Hitung jumlah hari sejak booster terakhir diklaim
-        days_since_last_booster = (now - last_booster_date).days
-        
-        # Pilih booster_id berikutnya
-        if days_since_last_booster >= 1:
-            booster_id_to_claim = str((int(last_booster_id) % 9) + 1)
-    
-    if booster_id_to_claim:
-        payload = {"init_data": init_data, "booster_id": booster_id_to_claim}
-        response = requests.post(BOOSTER_URL, headers=headers, json=payload)
-        return response.json()
-    else:
-        print("Tidak ada booster yang perlu diklaim saat ini.")
-        return {}
+    payload = {"init_data": init_data, "booster_id": booster_id}
+    response = requests.post(BOOSTER_URL, headers=headers, json=payload)
+    return response.json()
 
 def claim_8_hours(init_data):
     headers = {
@@ -73,43 +51,13 @@ def farming_claim(init_data):
     response = requests.post(FARMING_CLAIM_URL, headers=headers, json=payload)
     return response.json()
 
-def execute_quest(init_data, executed_quests):
+def execute_quest(init_data, quest_id):
     headers = {
         "Content-Type": "application/json",
     }
-    
-    quests_to_complete = {}
-    total_completed = 0
-    
-    # Periksa tipe data dari executed_quests
-    if isinstance(executed_quests, dict):
-        for quest_id, quest_info in executed_quests.items():
-            if isinstance(quest_info, dict):
-                if not quest_info.get('completed', False):
-                    quests_to_complete[quest_id] = quest_info
-            elif isinstance(quest_info, bool):
-                if not quest_info:
-                    quests_to_complete[quest_id] = {"description": "Unknown", "points_amount": "Unknown"}
-            else:
-                print(f"Data format tidak dikenali untuk quest ID {quest_id}.")
-    
-    if quests_to_complete:
-        for quest_id, quest_info in quests_to_complete.items():
-            quest_description = quest_info.get("description", f"Tugas ID {quest_id}")
-            print(f"Menyelesaikan tugas: {quest_description} (ID: {quest_id})")
-            payload = {"init_data": init_data, "quest_id": quest_id}
-            response = requests.post(QUEST_URL, headers=headers, json=payload)
-            if "data" in response.json():
-                print(f"Tugas selesai: {quest_description}")
-                total_completed += 1
-            else:
-                error_message = response.json().get("message", "Terjadi kesalahan saat menyelesaikan tugas.")
-                print(f"{error_message}")
-            time.sleep(2)
-        
-        print(f"Jumlah tugas yang diselesaikan: {total_completed}")
-    else:
-        print("Tidak ada tugas quest yang perlu diselesaikan.")
+    payload = {"init_data": init_data, "quest_id": quest_id}
+    response = requests.post(QUEST_URL, headers=headers, json=payload)
+    return response.json()
 
 def countdown_timer(seconds):
     start_time = time.time()
@@ -128,6 +76,21 @@ def countdown_timer(seconds):
 def format_timestamp(timestamp):
     return datetime.fromtimestamp(timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
+def get_next_booster_id(applied_boosters, farming_boosters):
+    # Mendapatkan ID booster terakhir yang diterapkan
+    if not applied_boosters:
+        return min(farming_boosters.keys())  # Mengembalikan ID booster pertama jika belum ada booster yang diterapkan
+
+    last_booster_id = max(applied_boosters.keys(), key=lambda k: applied_boosters[k])
+    farming_boosters_sorted = sorted(farming_boosters.keys(), key=int)
+    
+    try:
+        next_booster_id = farming_boosters_sorted[farming_boosters_sorted.index(last_booster_id) + 1]
+    except IndexError:
+        next_booster_id = farming_boosters_sorted[0]  # Reset ke ID booster pertama jika tidak ada booster berikutnya
+
+    return next_booster_id
+
 def process_accounts():
     global last_booster_claim
     while True:  # Loop utama agar script mengulang terus-menerus
@@ -145,69 +108,58 @@ def process_accounts():
                 balance = login_response["data"].get("balance", "Tidak tersedia")
                 print(f"Balance akun: {balance}")
 
-                farming_data = login_response["data"].get("farming", {})
-                if farming_data:
-                    start_at = format_timestamp(farming_data.get("start_at", 0))
-                    end_at = format_timestamp(farming_data.get("end_at", 0))
-                    points_amount = farming_data.get("points_amount", "Tidak tersedia")
-                    print(f"Farming mulai pada: {start_at}")
-                    print(f"Bisa farming lagi pada: {end_at}")
-                    print(f"Poin yang akan didapatkan: {points_amount}")
-                    
-                    # Simpan waktu mulai farming berikutnya
-                    next_farming_time[init_data] = datetime.fromtimestamp(farming_data.get("end_at", 0) / 1000)
+                config = login_response["data"].get("config", {})
+                if config:
+                    farming_boosters = config.get("farming_boosters", {})
+                    quests = config.get("quests", {})
+                    applied_boosters = login_response["data"].get("applied_boosters", {})
 
-                    now = datetime.now()
-                    if now >= next_farming_time[init_data]:
-                        print("Waktunya farming. Memulai tugas farming...")
-                        farming_claim_response = farming_claim(init_data)
-                        if "data" in farming_claim_response:
-                            points_amount = farming_claim_response["data"].get("points_amount", "Tidak tersedia")
-                            start_at = format_timestamp(farming_claim_response["data"].get("start_at", 0))
-                            end_at = format_timestamp(farming_claim_response["data"].get("end_at", 0))
-                            print(f"Poin yang didapat dari farming: {points_amount}")
-                            print(f"Farming mulai pada: {start_at}")
-                            print(f"Bisa farming lagi pada: {end_at}")
-                        else:
-                            error_message = farming_claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
-                            print(f"{error_message}")
+                    # Klaim Booster (hanya 1 hari sekali)
+                    if farming_boosters:
+                        now = datetime.now()
+                        if now - last_booster_claim >= timedelta(days=1):
+                            next_booster_id = get_next_booster_id(applied_boosters, farming_boosters)
+                            booster_description = farming_boosters[next_booster_id].get("description")
+                            booster_time = farming_boosters[next_booster_id].get("time_after_parent_booster")
 
-                        # Klaim 8 Jam setelah farming
-                        print("Mengklaim Farming...")
-                        claim_response = claim_8_hours(init_data)
-                        if "data" in claim_response:
-                            points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
-                            if points_amount == "Tidak tersedia":
-                                print("Belum waktunya farming untuk akun ini.")
+                            print("Mengklaim booster...")
+                            booster_response = claim_booster(init_data, next_booster_id)
+                            if "data" in booster_response:
+                                print(f"Booster telah diklaim: {booster_description}")
+                                print(f"Booster berlaku selama: {booster_time}")
+                                last_booster_claim = now
                             else:
-                                print(f"Poin yang didapat: {points_amount}")
+                                error_message = booster_response.get("message", "Terjadi kesalahan saat klaim booster.")
+                                print(f"{error_message}")
                         else:
-                            error_message = claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
-                            print(f"{error_message}")
-
+                            print("Booster sudah diklaim hari ini.")
                     else:
-                        print("Belum waktunya farming. Coba klaim booster atau jalankan tugas quest.")
-                else:
-                    print("Tidak ada data farming yang tersedia.")
+                        print("Tidak ada data booster tersedia.")
 
-                # Klaim Booster (hanya 1 hari sekali)
-                applied_boosters = login_response["data"].get("applied_boosters", {})
-                print("Mengklaim booster...")
-                booster_response = claim_booster(init_data, applied_boosters)
-                if "data" in booster_response:
-                    print(f"Booster telah diklaim.")
-                else:
-                    error_message = booster_response.get("message", "Terjadi kesalahan saat klaim booster.")
-                    print(f"{error_message}")
-
-                # Menyelesaikan Tugas Quest
-                executed_quests = login_response["data"].get("executed_quests", {})
-                print("Menyelesaikan tugas quest...")
-                execute_quest(init_data, executed_quests)
+                    # Menyelesaikan Tugas Quest
+                    if quests:
+                        total_completed = 0
+                        for quest_id, quest in quests.items():
+                            quest_description = quest.get("description")
+                            quest_points = quest.get("points_amount")
+                            print(f"Menyelesaikan tugas: {quest_description} (ID: {quest_id})")
+                            quest_response = execute_quest(init_data, quest_id)
+                            if "data" in quest_response:
+                                print(f"Tugas selesai: {quest_description}")
+                                print(f"Poin yang didapat: {quest_points}")
+                                total_completed += 1
+                            else:
+                                error_message = quest_response.get("message", "Terjadi kesalahan saat menyelesaikan tugas.")
+                                print(f"{error_message}")
+                            time.sleep(2)
+                        
+                        print(f"Jumlah tugas yang diselesaikan: {total_completed}")
+                    else:
+                        print("Tidak ada data quest tersedia.")
                 
-            else:
-                print("Login gagal atau data tidak tersedia.")
-                continue
+                else:
+                    print("Login gagal atau data tidak tersedia.")
+                    continue
 
             # Jeda 5 detik antar akun
             time.sleep(5)
