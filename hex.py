@@ -148,7 +148,7 @@ def process_accounts():
 
                     booster_ids = list(farming_boosters.keys())
                     if days_since_last_booster < len(booster_ids):
-                        next_booster_id = booster_ids[days_since_last_booster]
+                        next_booster_id = str(int(last_booster_id) + 1)
                         booster = farming_boosters.get(next_booster_id, {})
                         booster_description = booster.get("description", "Deskripsi tidak tersedia")
                         booster_time = booster.get("time_after_parent_booster", "Durasi tidak tersedia")
