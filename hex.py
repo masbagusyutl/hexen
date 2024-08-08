@@ -64,6 +64,7 @@ def log_error(task, error_message, response):
         file.write(f"Respon: {response}\n\n")
 
 def process_accounts():
+    last_end_time = None
     while True:
         accounts = read_accounts()
         num_accounts = len(accounts)
@@ -115,6 +116,9 @@ def process_accounts():
                             log_error("farming_claim", error_message, farming_claim_response)
                     else:
                         print("Belum waktunya farming.")
+                    
+                    # Simpan waktu end_at dari akun terakhir
+                    last_end_time = next_farming_time[init_data]
                 else:
                     print("Tidak ada data farming yang tersedia.")
             else:
@@ -126,12 +130,11 @@ def process_accounts():
             time.sleep(5)
 
         # Menunggu hingga waktu farming berikutnya
-        if next_farming_time:
-            next_time = min(next_farming_time.values())
+        if last_end_time:
             now = datetime.now()
-            seconds_until_next_farming = (next_time - now).total_seconds()
+            seconds_until_next_farming = (last_end_time - now).total_seconds()
             if seconds_until_next_farming > 0:
-                print(f"Menunggu hingga {format_timestamp(next_time.timestamp() * 1000)}")
+                print(f"Menunggu hingga {format_timestamp(last_end_time.timestamp() * 1000)}")
                 countdown_timer(int(seconds_until_next_farming))
 
 if __name__ == "__main__":
