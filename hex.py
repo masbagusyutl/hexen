@@ -84,7 +84,7 @@ def log_error(task, error_message, response):
 
 def process_accounts():
     global last_booster_claim
-    while True:  # Loop utama agar script mengulang terus-menerus
+    while True:
         accounts = read_accounts()
         num_accounts = len(accounts)
         print(f"Jumlah akun: {num_accounts}")
@@ -150,9 +150,9 @@ def process_accounts():
                 farming_boosters = login_response["data"].get("config", {}).get("farming_boosters", {})
                 if farming_boosters:
                     last_booster_id = max(map(int, applied_boosters.keys()), default=0)
-                    next_booster_id = last_booster_id + 1 if last_booster_id < 9 else 1
+                    next_booster_id = str(last_booster_id + 1 if last_booster_id < len(farming_boosters) else 1)
 
-                    if next_booster_id in farming_boosters:
+                    if next_booster_id in farming_boosters.keys():
                         booster_description = farming_boosters[next_booster_id].get("description", "Deskripsi tidak tersedia")
                         booster_time = farming_boosters[next_booster_id].get("time_after_parent_booster", "Tidak tersedia")
                         
