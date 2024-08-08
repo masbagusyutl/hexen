@@ -10,7 +10,7 @@ FARMING_CLAIM_URL = "https://clicker.hexn.io/v1/farming/claim"
 DATA_FILE = "data.txt"
 ERROR_LOG_FILE = "error_log.txt"
 
-# Variabel global untuk menyimpan waktu terakhir klaim booster
+# Variabel global untuk menyimpan waktu farming berikutnya
 next_farming_time = {}
 
 def read_accounts():
@@ -96,30 +96,23 @@ def process_accounts():
                         print("Waktunya farming. Memulai tugas farming...")
                         farming_claim_response = farming_claim(init_data)
                         if "data" in farming_claim_response:
-                            points_amount = farming_claim_response["data"].get("points_amount", "Tidak tersedia")
-                            start_at = format_timestamp(farming_claim_response["data"].get("start_at", 0))
-                            end_at = format_timestamp(farming_claim_response["data"].get("end_at", 0))
-                            print(f"Poin yang didapat dari farming: {points_amount}")
-                            print(f"Farming mulai pada: {start_at}")
-                            print(f"Bisa farming lagi pada: {end_at}")
+                            print("Mengklaim Farming...")
+                            claim_response = claim_8_hours(init_data)
+                            if "data" in claim_response:
+                                points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
+                                start_at = format_timestamp(claim_response["data"].get("start_at", 0))
+                                end_at = format_timestamp(claim_response["data"].get("end_at", 0))
+                                print(f"Poin yang didapat dari farming: {points_amount}")
+                                print(f"Farming mulai pada: {start_at}")
+                                print(f"Bisa farming lagi pada: {end_at}")
+                            else:
+                                error_message = claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
+                                print(f"{error_message}")
+                                log_error("claim_8_hours", error_message, claim_response)
                         else:
                             error_message = farming_claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
                             print(f"{error_message}")
                             log_error("farming_claim", error_message, farming_claim_response)
-
-                        # Klaim 8 Jam setelah farming
-                        print("Mengklaim Farming...")
-                        claim_response = claim_8_hours(init_data)
-                        if "data" in claim_response:
-                            points_amount = claim_response["data"].get("points_amount", "Tidak tersedia")
-                            if points_amount == "Tidak tersedia":
-                                print("Belum waktunya farming untuk akun ini.")
-                            else:
-                                print(f"Poin yang didapat: {points_amount}")
-                        else:
-                            error_message = claim_response.get("message", "Terjadi kesalahan saat klaim farming.")
-                            print(f"{error_message}")
-                            log_error("claim_8_hours", error_message, claim_response)
                     else:
                         print("Belum waktunya farming.")
                 else:
